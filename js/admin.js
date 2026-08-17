@@ -342,9 +342,19 @@
       + '<div class="field"><label>本文</label>'
       + '<textarea id="nBody" rows="7" placeholder="改行はそのまま表示されます。URLは自動でリンクになります。">' + esc(n ? n.body : '') + '</textarea></div>'
       + '<div class="field"><label>画像URL（任意）</label><input id="nImage" type="url" value="' + esc(n ? n.image : '') + '" placeholder="https://…"></div>'
-      + '<div class="field"><label>誰に見せるか（宛先タグ・カンマ区切り／空欄＝全員）</label>'
-      + '<input id="nTarget" type="text" value="' + esc(n ? n.targets.join(',') : '') + '" placeholder="例：凛穏塾2.5期生,卒業生サロン">'
-      + '<div class="hint">使えるタグ：' + (tags.length ? tags.map(function (t) { return '<b>' + esc(t) + '</b>'; }).join('、') : '（コース設定を先に登録してください）') + '</div></div>'
+      + '<div class="field"><label>誰に見せるか（宛先）</label>'
+      + '<div class="pickers" id="nTargets">'
+      + '<button class="tagpick all' + (!n || !n.targets.length ? ' on' : '') + '" data-tag="" type="button">👥 全員</button>'
+      + tags.map(function (t) {
+          var on = n && n.targets.indexOf(t) >= 0;
+          var cnt = D.students.filter(function (s) {
+            return s.tags.split(',').some(function (x) { return x.trim() === t; });
+          }).length;
+          return '<button class="tagpick' + (on ? ' on' : '') + '" data-tag="' + esc(t) + '" type="button">'
+            + esc(t) + '<span>' + cnt + '</span></button>';
+        }).join('')
+      + '</div>'
+      + '<div class="hint" id="nTargetHint"></div></div>'
       + '<div class="field"><label>アンケートの選択肢（任意・カンマ区切り）</label>'
       + '<input id="nChoices" type="text" value="' + esc(n ? n.choices.join(',') : '') + '" placeholder="例：参加します,欠席します,あとで決めます">'
       + '<div class="hint">入れると、お知らせの下にボタンが出て回答が「お知らせ回答」タブに記録されます。</div></div>'
@@ -358,7 +368,7 @@
           title: title,
           body: $('nBody').value,
           image: $('nImage').value.trim(),
-          targets: $('nTarget').value.trim(),
+          targets: selectedTargets().join(','),
           choices: $('nChoices').value.trim(),
           published: $('nPub').value,
           pop: $('nPop').checked ? '1' : '0'
@@ -370,6 +380,44 @@
         });
       }
     );
+    bindTargetPickers();
+  }
+
+  /** 宛先タグの選択ボタン（「全員」と個別タグは排他） */
+  function selectedTargets() {
+    return Array.prototype.slice.call(document.querySelectorAll('#nTargets .tagpick.on'))
+      .map(function (b) { return b.dataset.tag; })
+      .filter(String);
+  }
+  function bindTargetPickers() {
+    var wrap = $('nTargets');
+    if (!wrap) return;
+    var hint = $('nTargetHint');
+    function paint() {
+      var picked = selectedTargets();
+      var all = wrap.querySelector('.tagpick.all');
+      all.classList.toggle('on', picked.length === 0);
+      if (!picked.length) {
+        hint.textContent = '全員（' + D.students.length + '名）に表示されます。';
+        return;
+      }
+      var n = D.students.filter(function (s) {
+        var mine = s.tags.split(',').map(function (x) { return x.trim(); });
+        return picked.some(function (t) { return mine.indexOf(t) >= 0; });
+      }).length;
+      hint.textContent = '選択中：' + picked.join('／') + ' → ' + n + '名に表示されます。';
+    }
+    Array.prototype.forEach.call(wrap.querySelectorAll('.tagpick'), function (b) {
+      b.addEventListener('click', function () {
+        if (b.classList.contains('all')) {
+          Array.prototype.forEach.call(wrap.querySelectorAll('.tagpick'), function (x) { x.classList.remove('on'); });
+        } else {
+          b.classList.toggle('on');
+        }
+        paint();
+      });
+    });
+    paint();
   }
 
   function deleteNews(n) {
