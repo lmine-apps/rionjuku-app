@@ -1,0 +1,9 @@
+# 個人情報・作業用ファイルは絶対に公開しない
+*.tsv
+*.csv
+import/
+gas-page/
+_tmp_*.html
+.claude/
+Thumbs.db
+.DS_Store

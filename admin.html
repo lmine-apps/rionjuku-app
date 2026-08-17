@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>凛穏塾｜運営ページ</title>
+<link rel="stylesheet" href="css/style.css?v=15">
+</head>
+<body>
+
+<!-- ===== ログイン（運営） ===== -->
+<div id="scLogin" class="login-wrap">
+  <div class="login-card">
+    <h1>凛穏塾 運営</h1>
+    <div class="sub">ADMINISTRATION</div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">メールアドレス</label>
+        <input id="email" type="email" autocomplete="email" inputmode="email" required>
+      </div>
+      <div class="field">
+        <label for="pass">パスワード</label>
+        <input id="pass" type="password" autocomplete="current-password" required>
+      </div>
+      <button id="loginBtn" class="btn" type="submit">ログイン</button>
+      <div id="loginMsg" class="msg"></div>
+    </form>
+    <div class="login-note">
+      受講生ページと同じログインです。<br>タグに <b>admin</b> がある方のみ操作できます。
+    </div>
+  </div>
+</div>
+
+<!-- ===== 運営画面 ===== -->
+<div id="scApp" class="hidden">
+  <header class="hd">
+    <div class="brand">凛穏塾<small>ADMINISTRATION</small></div>
+    <div class="sp"></div>
+    <div class="who" id="who"></div>
+    <button id="viewBtn" type="button">受講生ページ</button>
+    <button id="reloadBtn" type="button">再読込</button>
+    <button id="logoutBtn" type="button">ログアウト</button>
+  </header>
+
+  <div id="notice" class="banner hidden"></div>
+
+  <div class="tabs">
+    <button data-tab="video" class="on" type="button">🎬 動画</button>
+    <button data-tab="news" type="button">📣 お知らせ</button>
+    <button data-tab="student" type="button">👥 閲覧者</button>
+    <button data-tab="course" type="button">📚 コース設定</button>
+  </div>
+
+  <!-- 動画 -->
+  <section id="paneVideo" class="pane">
+    <div class="toolbar">
+      <select id="fCourse"></select>
+      <input id="fWord" type="search" placeholder="タイトルで絞り込み" style="min-width:200px">
+      <button id="addVideoBtn" class="btn" type="button">＋ 動画を追加</button>
+      <span id="vCount" class="hint"></span>
+    </div>
+    <div id="videoTable"></div>
+  </section>
+
+  <!-- お知らせ -->
+  <section id="paneNews" class="pane hidden">
+    <div class="toolbar">
+      <button id="addNewsBtn" class="btn" type="button">＋ お知らせを作成</button>
+      <span id="nCount" class="hint"></span>
+    </div>
+    <div id="newsTable"></div>
+  </section>
+
+  <!-- 閲覧者 -->
+  <section id="paneStudent" class="pane hidden">
+    <div class="toolbar">
+      <input id="sWord" type="search" placeholder="名前・メール・タグで絞り込み" style="min-width:240px">
+      <button id="addStudentBtn" class="btn" type="button">＋ 閲覧者を追加</button>
+      <span id="sCount" class="hint"></span>
+    </div>
+    <div id="studentTable"></div>
+  </section>
+
+  <!-- コース設定 -->
+  <section id="paneCourse" class="pane hidden">
+    <div class="toolbar">
+      <span class="hint">「タグ」が閲覧者のタグと一致した人だけ、そのコースを視聴できます。並び順は小さい数が上。</span>
+    </div>
+    <div id="courseTable"></div>
+  </section>
+</div>
+
+<script src="js/config.js?v=15"></script>
+<script src="js/common.js?v=15"></script>
+<script src="js/mock.js?v=15"></script>
+<script src="js/admin.js?v=15"></script>
+</body>
+</html>

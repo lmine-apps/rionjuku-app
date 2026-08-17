@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>凛穏塾｜受講生専用 動画ページ</title>
+<link rel="stylesheet" href="css/style.css?v=15">
+</head>
+<body>
+
+<!-- ===== ログイン ===== -->
+<div id="scLogin" class="login-wrap">
+  <div class="login-card">
+    <h1>凛穏塾</h1>
+    <div class="sub">受講生専用 動画ページ</div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">メールアドレス</label>
+        <input id="email" type="email" autocomplete="email" inputmode="email" required>
+      </div>
+      <div class="field">
+        <label for="pass">パスワード</label>
+        <input id="pass" type="password" autocomplete="current-password" required>
+      </div>
+      <button id="loginBtn" class="btn" type="submit">ログイン</button>
+      <div id="loginMsg" class="msg"></div>
+    </form>
+    <button id="firstLink" class="linklike" type="button">はじめての方はこちら（パスワードを設定する）</button>
+    <div class="login-note">
+      2回目以降は、ご自身で決めたパスワードでお入りください。<br>
+      分からなくなった場合は運営スタッフまでお問い合わせください。
+    </div>
+  </div>
+</div>
+
+<!-- ===== 本体 ===== -->
+<div id="scApp" class="hidden">
+  <header class="hd">
+    <div class="brand">凛穏塾<small>ONLINE STUDY</small></div>
+    <div class="sp"></div>
+    <button id="newsBtn" class="hd-icon" type="button">お知らせ<span id="newsBadge" class="badge hidden">0</span></button>
+    <div class="acct">
+      <button id="acctBtn" type="button"><span id="who"></span> ▾</button>
+      <div id="acctMenu" class="acct-menu hidden">
+        <button data-act="guide" type="button">📖 使い方ガイド</button>
+        <button data-act="push" type="button">🔔 通知の設定</button>
+        <button data-act="copy" type="button">💻 パソコンで見る（URLをコピー）</button>
+        <div class="acct-sep"></div>
+        <button data-act="name" type="button">✏️ お名前を変更</button>
+        <button data-act="pass" type="button">🔑 パスワードを変更</button>
+        <div class="acct-sep"></div>
+        <button data-act="terms" type="button">📄 利用規約</button>
+        <button data-act="privacy" type="button">🔒 プライバシーポリシー</button>
+        <div class="acct-sep adminonly hidden"></div>
+        <button data-act="newnews" class="adminonly hidden" type="button">📣 お知らせを作成</button>
+        <button data-act="newvideo" class="adminonly hidden" type="button">🎬 動画を追加</button>
+        <button data-act="admin" class="adminonly hidden" type="button">⚙ 運営ページ</button>
+        <div class="acct-sep"></div>
+        <button data-act="logout" type="button">ログアウト</button>
+      </div>
+    </div>
+  </header>
+
+  <button id="drawerTab" class="drawer-tab" type="button">目次</button>
+  <div id="backdrop" class="backdrop hidden"></div>
+
+  <div class="main">
+    <!-- 左：コース一覧 or 章＋レッスン -->
+    <aside id="side" class="side">
+      <div id="sideHead" class="side-head"></div>
+      <div id="sideBody"></div>
+    </aside>
+
+    <div>
+      <!-- コース選択（複数コースの人だけ通る） -->
+      <section id="scPicker" class="body hidden">
+        <h1>コースを選んでください</h1>
+        <p class="lead">ご受講いただいているコースです。</p>
+        <div id="pickerList" class="picker"></div>
+      </section>
+
+      <!-- 視聴 -->
+      <section id="scWatch" class="watch hidden">
+        <div class="crumb" id="vCrumb"></div>
+        <h1 id="vTitle"></h1>
+        <div id="vLimit" class="limit-bar hidden"></div>
+        <div class="frame"><iframe id="player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>
+        <div class="watch-tools">
+          <button id="doneBtn" type="button">□ 視聴済みにする</button>
+        </div>
+        <div id="markCard" class="card hidden">
+          <h3>目次（タップでその場面へ）</h3>
+          <div class="marks" id="marks"></div>
+        </div>
+        <div id="noteCard" class="card hidden">
+          <h3>補足</h3>
+          <div class="note-text" id="noteText"></div>
+        </div>
+        <div class="card">
+          <h3 id="chapListTitle">この章の動画</h3>
+          <div id="chapList"></div>
+        </div>
+        <div class="vnav">
+          <button id="prevBtn" type="button">← 前の動画</button>
+          <button id="nextBtn" type="button">次の動画 →</button>
+        </div>
+      </section>
+
+      <!-- お知らせ -->
+      <section id="scNews" class="body hidden">
+        <h1>お知らせ</h1>
+        <p class="lead" id="newsLead"></p>
+        <div id="newsList"></div>
+      </section>
+
+      <!-- 何も観られない人向け -->
+      <section id="scEmpty" class="body hidden">
+        <h1>ご視聴できる動画がまだありません</h1>
+        <div class="empty">コースの割り当てをお待ちください。お心当たりのない場合は運営スタッフまでご連絡ください。</div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="https://player.vimeo.com/api/player.js"></script>
+<script src="js/config.js?v=15"></script>
+<script src="js/common.js?v=15"></script>
+<script src="js/mock.js?v=15"></script>
+<script src="js/app.js?v=15"></script>
+</body>
+</html>
