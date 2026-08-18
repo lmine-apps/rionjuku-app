@@ -141,7 +141,76 @@
     }
   }
 
-  // ---------- 通知の設定 ----------
+  // ---------- 通知の設定（Webプッシュ） ----------
+  var PUSH_KEY = 'rj_push';        // '1'=オン '0'=本人が明示オフ
+  function pushPref() { try { return localStorage.getItem(PUSH_KEY) || ''; } catch (e) { return ''; } }
+  function setPushPref(v) { try { localStorage.setItem(PUSH_KEY, v); } catch (e) {} }
+
+  function pushSupported() {
+    return !!(RJ.CFG.PUSH_READY && RJ.CFG.FIREBASE && RJ.CFG.FIREBASE.projectId
+      && 'Notification' in window && 'serviceWorker' in navigator);
+  }
+  /** iPhoneはホーム画面に追加していないと通知を受け取れない */
+  function isIosNotStandalone() {
+    var ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    var standalone = window.navigator.standalone === true
+      || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    return ios && !standalone;
+  }
+
+  var fbLoading = null;
+  function loadFirebase() {
+    if (window.firebase && window.firebase.messaging) return Promise.resolve();
+    if (fbLoading) return fbLoading;
+    function one(src) {
+      return new Promise(function (ok, ng) {
+        var s = document.createElement('script');
+        s.src = src; s.onload = ok; s.onerror = function () { ng(new Error('読み込みに失敗しました')); };
+        document.head.appendChild(s);
+      });
+    }
+    fbLoading = one('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js')
+      .then(function () { return one('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js'); })
+      .then(function () { firebase.initializeApp(RJ.CFG.FIREBASE); });
+    return fbLoading;
+  }
+
+  /** 通知を有効にして、端末のトークンをスプシへ登録する */
+  function pushEnable() {
+    if (!pushSupported()) return Promise.reject(new Error('この端末では通知を利用できません。'));
+    return loadFirebase()
+      .then(function () { return Notification.requestPermission(); })
+      .then(function (perm) {
+        if (perm !== 'granted') throw new Error('通知が許可されませんでした。端末の設定からも変更できます。');
+        var q = new URLSearchParams(RJ.CFG.FIREBASE).toString();
+        return navigator.serviceWorker.register('firebase-messaging-sw.js?' + q);
+      })
+      .then(function (reg) {
+        return firebase.messaging().getToken({ vapidKey: RJ.CFG.VAPID_KEY, serviceWorkerRegistration: reg });
+      })
+      .then(function (token) {
+        if (!token) throw new Error('通知の登録に失敗しました。時間をおいてお試しください。');
+        return api('push_reg', { token: store.token(), fcm: token });
+      })
+      .then(function (res) {
+        if (!res || !res.ok) throw new Error(RJ.errMsg(res));
+        setPushPref('1');
+        return true;
+      });
+  }
+  function pushDisable() {
+    setPushPref('0');
+    if (!window.firebase || !firebase.messaging) return Promise.resolve();
+    return firebase.messaging().getToken({ vapidKey: RJ.CFG.VAPID_KEY })
+      .then(function (t) { return api('push_unreg', { token: store.token(), fcm: t }); })
+      .catch(function () { });
+  }
+  /** 一度オンにした人は、起動のたびに黙ってトークンを更新しておく */
+  function pushRefresh() {
+    if (pushPref() !== '1' || !pushSupported() || Notification.permission !== 'granted') return;
+    pushEnable().catch(function () { });
+  }
+
   function showPush() {
     if (!RJ.CFG.PUSH_READY) {
       RJ.modal('通知の設定',
@@ -154,18 +223,35 @@
         null, { cancelText: '閉じる' });
       return;
     }
-    RJ.modal('通知の設定',
-      '<p style="margin-top:0;font-size:14px">新しいお知らせをスマホで受け取れます。</p>'
-      + '<div class="notice-box"><b>iPhoneをお使いの方へ</b><br>'
-      + 'ホーム画面に追加してから開くと、通知が受け取れるようになります（Safariの仕様です）。</div>'
-      + '<div class="hint" id="pushState"></div>',
+
+    var on = (pushPref() === '1' && 'Notification' in window && Notification.permission === 'granted');
+    var body =
+      '<p style="margin-top:0;font-size:14px">新しいお知らせが届いたときに、'
+      + 'スマホの通知でお知らせします。</p>'
+      + '<div class="notice-box"><b>いまの状態：</b>'
+      + (on ? '<span style="color:#1f7a5c">🔔 オン</span>' : '<span style="color:#61768a">🔕 オフ</span>')
+      + '</div>'
+      + (isIosNotStandalone()
+        ? '<div class="notice-box"><b>iPhoneをお使いの方へ</b><br>'
+          + '通知を受け取るには、先に<b>ホーム画面へ追加</b>して、そこから開いてください（Safariの仕様です）。<br>'
+          + '追加のしかたは「📖 使い方ガイド」でご案内しています。</div>'
+        : '')
+      + '<div class="hint" id="pushMsg"></div>';
+
+    var m = RJ.modal('通知の設定', body,
       function (close, setMsg) {
-        if (!('Notification' in window)) { setMsg('お使いの端末では通知を利用できません。'); return; }
-        return Notification.requestPermission().then(function (p) {
-          if (p === 'granted') { close(); RJ.modal('通知をオンにしました', '<p>新しいお知らせが届いたときにお知らせします。</p>', null, { cancelText: '閉じる' }); }
-          else setMsg('通知が許可されませんでした。端末の設定からも変更できます。');
-        });
-      }, { saveText: '通知をオンにする' });
+        if (on) {
+          return pushDisable().then(function () { close(); showPush(); });
+        }
+        if (isIosNotStandalone()) { setMsg('ホーム画面に追加してから、もう一度お試しください。'); return; }
+        return pushEnable().then(function () {
+          close();
+          RJ.modal('通知をオンにしました', '<p style="margin:0">新しいお知らせが届いたときにお知らせします。</p>',
+            null, { cancelText: '閉じる' });
+        }, function (e) { setMsg(e.message); });
+      },
+      { saveText: on ? '通知をオフにする' : '通知をオンにする', cancelText: '閉じる' });
+    return m;
   }
 
   // ---------- 使い方ガイド ----------
@@ -308,6 +394,7 @@
     }
     renderNewsBadge();
     playGate();
+    pushRefresh();
 
     if (!state.courses.length) {
       show('scEmpty');

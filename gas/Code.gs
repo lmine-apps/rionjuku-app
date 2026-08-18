@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.3.1
+ * VERSION: v1.4.0
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -9,7 +9,7 @@
  *
  * ★スプシは「リンクを知っている全員」共有をOFFにすること（パスワードが平文で入るため）。
  *
- * v1.3.1 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
+ * v1.4.0 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
  *              アカウント設定（表示名・パスワード変更）・LINE UIDの回収・uidログイン（既定OFF）
  */
 
@@ -21,6 +21,7 @@ const SH_COURSE  = 'コース設定';
 const SH_NEWS    = 'お知らせ';
 const SH_REPLY   = 'お知らせ回答';
 const SH_LOG     = 'ログイン履歴';
+const SH_PUSH    = 'プッシュ';      // 通知の宛先（端末トークン）
 const TOKEN_DAYS = 30;             // ログイン保持日数
 const MAX_FAIL   = 10;             // 同一メールの連続失敗許容数（10分間）
 const TZ         = 'Asia/Tokyo';
@@ -50,7 +51,7 @@ const N_COLS = 10;
 // ===== ルーター =====
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: 'v1.3.1' });
+  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: 'v1.4.0' });
   return out_({ ok: false, error: 'post_only' });
 }
 
@@ -58,7 +59,7 @@ function doPost(e) {
   const p = (e && e.parameter) || {};
   try {
     switch (p.action) {
-      case 'ping':          return out_({ ok: true, msg: 'pong', version: 'v1.3.1' });
+      case 'ping':          return out_({ ok: true, msg: 'pong', version: 'v1.4.0' });
       case 'login':         return out_(apiLogin_(p));
       case 'uid_login':     return out_(apiUidLogin_(p));
       case 'first_check':   return out_(apiFirstCheck_(p));
@@ -68,6 +69,9 @@ function doPost(e) {
       case 'line_link':     return out_(apiLineLink_(p));
       case 'news_like':     return out_(apiNewsLike_(p));
       case 'news_reply':    return out_(apiNewsReply_(p));
+      case 'push_reg':      return out_(apiPushReg_(p));
+      case 'push_unreg':    return out_(apiPushUnreg_(p));
+      case 'news_push':     return out_(apiNewsPush_(p));
       case 'admin_data':    return out_(apiAdminData_(p));
       case 'video_add':     return out_(apiVideoAdd_(p));
       case 'video_update':  return out_(apiVideoUpdate_(p));
@@ -907,6 +911,174 @@ function apiNewsDelete_(p) {
     newsSheet_().deleteRow(hit.row);
     return { ok: true };
   } finally { lock.releaseLock(); }
+}
+
+// ===== Webプッシュ通知（Firebase Cloud Messaging v1） =====
+/**
+ * 通知の宛先は「プッシュ」タブに貯める（token／メール／名前／日時）。
+ * 送信にはFirebaseのサービスアカウントが要る。スクリプトプロパティに
+ *   FCM_PRIVATE_KEY … サービスアカウントの秘密鍵JSONを「丸ごと」貼る
+ * を入れておけば、project_id と client_email もそこから読み取る。
+ */
+function pushSheet_() {
+  return sheetOrCreate_(SH_PUSH, ['token', 'メールアドレス', '名前', '日時']);
+}
+
+/** 端末のトークンを登録（同じトークンは上書き） */
+function apiPushReg_(p) {
+  const g = me_(p); if (!g.ok) return g;
+  const fcm = s_(p.fcm);
+  if (!fcm) return { ok: false, error: 'empty' };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = pushSheet_();
+    const last = sh.getLastRow();
+    if (last >= 2) {
+      const vals = sh.getRange(2, 1, last - 1, 1).getValues();
+      for (let i = 0; i < vals.length; i++) {
+        if (s_(vals[i][0]) === fcm) {
+          sh.getRange(i + 2, 2, 1, 3).setValues([[g.user.email, g.user.name, nowStr_()]]);
+          return { ok: true, updated: true };
+        }
+      }
+    }
+    sh.appendRow([fcm, g.user.email, g.user.name, nowStr_()]);
+    return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
+/** 通知をオフにした端末を消す */
+function apiPushUnreg_(p) {
+  const g = me_(p); if (!g.ok) return g;
+  const fcm = s_(p.fcm);
+  if (!fcm) return { ok: true };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = pushSheet_();
+    const last = sh.getLastRow();
+    if (last < 2) return { ok: true };
+    const vals = sh.getRange(2, 1, last - 1, 1).getValues();
+    for (let i = vals.length - 1; i >= 0; i--) {
+      if (s_(vals[i][0]) === fcm) sh.deleteRow(i + 2);
+    }
+    return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
+/** サービスアカウントの鍵（JSON丸ごと）から必要な3点を取り出す */
+function fcmCreds_() {
+  const raw = s_(PropertiesService.getScriptProperties().getProperty('FCM_PRIVATE_KEY'));
+  if (!raw) return null;
+  let key = raw, mail = s_(PropertiesService.getScriptProperties().getProperty('FCM_CLIENT_EMAIL'));
+  let project = s_(PropertiesService.getScriptProperties().getProperty('FCM_PROJECT_ID'));
+  if (raw.charAt(0) === '{') {
+    try {
+      const j = JSON.parse(raw);
+      key = j.private_key || '';
+      mail = j.client_email || mail;
+      project = j.project_id || project;
+    } catch (err) { return null; }
+  }
+  key = String(key).replace(/\n/g, '\n').replace(/\r/g, '').replace(/^["']|["']$/g, '');
+  if (!key || !mail || !project) return null;
+  return { key: key, mail: mail, project: project };
+}
+
+/** サービスアカウントでアクセストークンを取る（FCM v1用） */
+function fcmAccessToken_() {
+  const c = fcmCreds_();
+  if (!c) return null;
+  const now = Math.floor(Date.now() / 1000);
+  const header = Utilities.base64EncodeWebSafe(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).replace(/=+$/, '');
+  const claim = Utilities.base64EncodeWebSafe(JSON.stringify({
+    iss: c.mail,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now
+  })).replace(/=+$/, '');
+  const sig = Utilities.base64EncodeWebSafe(
+    Utilities.computeRsaSha256Signature(header + '.' + claim, c.key)).replace(/=+$/, '');
+  const res = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', {
+    method: 'post',
+    payload: { grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: header + '.' + claim + '.' + sig },
+    muteHttpExceptions: true
+  });
+  const j = JSON.parse(res.getContentText() || '{}');
+  return j.access_token ? { token: j.access_token, project: c.project } : null;
+}
+
+/**
+ * お知らせを通知として送る（admin専用）
+ *   id   … お知らせのid
+ *   test … 1 なら自分の端末にだけ送る
+ * 宛先はお知らせの「宛先タグ」に合う人の端末だけ（空欄なら全員）。
+ */
+function apiNewsPush_(p) {
+  const g = requireAdmin_(p); if (!g.ok) return g;
+  const hit = news_().filter(function (n) { return n.id === s_(p.id); })[0];
+  if (!hit) return { ok: false, error: 'not_found' };
+
+  const auth = fcmAccessToken_();
+  if (!auth) return { ok: false, error: 'no_fcm_credentials' };
+
+  // 宛先の絞り込み
+  const students = students_();
+  const targetMails = {};
+  students.forEach(function (u) {
+    if (u.stopped) return;
+    if (!hit.targets.length || anyTag_(u.tags, hit.targets) || u.admin) targetMails[u.email] = true;
+  });
+
+  const sh = pushSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return { ok: false, error: 'no_tokens' };
+  const rows = sh.getRange(2, 1, last - 1, 4).getValues();
+  const tokens = [];
+  rows.forEach(function (r) {
+    const t = s_(r[0]), mail = email_(r[1]);
+    if (!t) return;
+    if (s_(p.test)) { if (mail === g.user.email) tokens.push(t); return; }
+    if (targetMails[mail]) tokens.push(t);
+  });
+  if (!tokens.length) return { ok: false, error: 'no_tokens' };
+
+  const body = String(hit.body || '').replace(/\s+/g, ' ').slice(0, 90);
+  const url = s_(PropertiesService.getScriptProperties().getProperty('APP_URL'))
+    || 'https://apps.l-mine.com/rionjuku-app/';
+  let sent = 0, failed = 0;
+  const dead = [];
+  tokens.forEach(function (t) {
+    const res = UrlFetchApp.fetch(
+      'https://fcm.googleapis.com/v1/projects/' + auth.project + '/messages:send',
+      {
+        method: 'post',
+        contentType: 'application/json',
+        headers: { Authorization: 'Bearer ' + auth.token },
+        payload: JSON.stringify({
+          message: {
+            token: t,
+            data: { title: hit.title, body: body, url: url, tag: 'news-' + hit.id },
+            webpush: { headers: { Urgency: 'high' }, fcmOptions: { link: url } }
+          }
+        }),
+        muteHttpExceptions: true
+      });
+    const code = res.getResponseCode();
+    if (code === 200) sent++;
+    else { failed++; if (code === 404 || code === 400) dead.push(t); }
+  });
+
+  // 無効になった端末は掃除する
+  if (dead.length) {
+    const all = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues();
+    for (let i = all.length - 1; i >= 0; i--) {
+      if (dead.indexOf(s_(all[i][0])) >= 0) sh.deleteRow(i + 2);
+    }
+  }
+  return { ok: true, sent: sent, failed: failed, total: tokens.length, removed: dead.length };
 }
 
 // ===== 名簿の補正 =====

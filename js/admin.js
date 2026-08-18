@@ -305,6 +305,7 @@
           + '<td class="narrow">' + (n.published ? '<span class="pill ok">公開</span>' : '<span class="pill off">非公開</span>') + '</td>'
           + '<td class="narrow">'
           + '<button class="mini" data-nedit="' + esc(n.id) + '" type="button">編集</button>'
+          + (n.published ? '<button class="mini push" data-npush="' + esc(n.id) + '" type="button">🔔 通知</button>' : '')
           + (n.choices.length && rep ? '<button class="mini" data-nrep="' + esc(n.id) + '" type="button">回答一覧</button>' : '')
           + '<button class="mini danger" data-ndel="' + esc(n.id) + '" type="button">削除</button>'
           + '</td></tr>';
@@ -318,6 +319,9 @@
     });
     Array.prototype.forEach.call($('newsTable').querySelectorAll('[data-nrep]'), function (b) {
       b.addEventListener('click', function () { showReplies(findNews(b.dataset.nrep)); });
+    });
+    Array.prototype.forEach.call($('newsTable').querySelectorAll('[data-npush]'), function (b) {
+      b.addEventListener('click', function () { pushNews(findNews(b.dataset.npush)); });
     });
   }
   function findNews(id) { return D.news.filter(function (n) { return n.id === String(id); })[0]; }
@@ -441,6 +445,47 @@
         return '<tr><td class="narrow">' + esc(r.at) + '</td><td>' + esc(r.name) + '</td><td>' + esc(r.email) + '</td><td>' + esc(r.choice) + '</td></tr>';
       }).join('') + '</tbody></table></div>',
       null, { cancelText: '閉じる' });
+  }
+
+  /** お知らせをスマホ通知で送る（まず自分にテスト → 本番送信） */
+  function pushNews(n) {
+    if (!n) return;
+    var who = n.targets.length ? n.targets.join('／') : '全員';
+    RJ.modal('通知を送る：' + n.title,
+      '<p style="margin-top:0;font-size:14px">このお知らせを、通知をオンにしている端末へ送ります。</p>'
+      + '<div class="notice-box"><b>宛先：</b>' + esc(who) + '<br>'
+      + '<b>見出し：</b>' + esc(n.title) + '</div>'
+      + '<p style="font-size:13px">まず<b>「自分にテスト」</b>で届き方をご確認ください。</p>'
+      + '<div class="hint" id="pushResult"></div>'
+      + '<div style="display:flex;gap:10px;margin-top:12px">'
+      + '<button class="btn ghost" id="pushTest" type="button">🧪 自分にテスト</button></div>',
+      function (close, setMsg) {
+        if (!confirm('この通知を対象者全員に送ります。よろしいですか？')) return;
+        return api('news_push', { token: store.token(), id: n.id }).then(function (res) {
+          if (!res || !res.ok) { setMsg(pushErr(res)); return; }
+          close();
+          RJ.modal('通知を送りました',
+            '<p style="margin:0">送信 ' + res.sent + '件／失敗 ' + res.failed + '件（対象端末 ' + res.total + '件）'
+            + (res.removed ? '<br><span class="hint">無効になった端末 ' + res.removed + '件を整理しました</span>' : '')
+            + '</p>', null, { cancelText: '閉じる' });
+        });
+      }, { saveText: '📢 全員に送信' });
+
+    var t = document.getElementById('pushTest');
+    if (t) t.addEventListener('click', function () {
+      var out = document.getElementById('pushResult');
+      out.textContent = '送信中…';
+      api('news_push', { token: store.token(), id: n.id, test: '1' }).then(function (res) {
+        out.textContent = (res && res.ok)
+          ? '✓ ご自身の端末へ送信しました（' + res.sent + '件）'
+          : pushErr(res);
+      }).catch(function (e) { out.textContent = e.message; });
+    });
+  }
+  function pushErr(res) {
+    if (res && res.error === 'no_fcm_credentials') return 'Firebaseの鍵（FCM_PRIVATE_KEY）が未設定です。';
+    if (res && res.error === 'no_tokens') return 'まだ通知をオンにしている端末がありません。';
+    return RJ.errMsg(res);
   }
 
   // ---------- 閲覧者 ----------
