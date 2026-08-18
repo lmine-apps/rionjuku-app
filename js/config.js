@@ -20,15 +20,15 @@ window.RJ_CONFIG = {
 
   // ── Webプッシュ通知（Firebase Cloud Messaging）──────────
   // 下の FIREBASE と VAPID_KEY を埋めてから PUSH_READY を true にする。
-  PUSH_READY: false,
+  PUSH_READY: true,
   FIREBASE: {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    messagingSenderId: '',
-    appId: ''
+    apiKey: 'AIzaSyBpBpGmxfWhyHq3rzwH2Oa_6IWDIZbOAj8',
+    authDomain: 'elabo-plus.firebaseapp.com',
+    projectId: 'elabo-plus',
+    messagingSenderId: '452649305918',
+    appId: '1:452649305918:web:4bef5bae57aee4d86c4e6f'
   },
-  VAPID_KEY: '',
+  VAPID_KEY: 'BAtxAvwJITAJ_q2DHtIajcTI_UEgJQhOlPI3uQ8IlXoV_kfyG3SQyRSVkT83Iyln9RsReuwgcR3By6g7roWif1Y',
 
   // 法務ページ（凛穏塾さん専用のものができたら差し替え）
   TERMS_URL: 'https://columns.l-mine.com/legal/terms.html',
