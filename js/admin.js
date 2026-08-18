@@ -199,11 +199,6 @@
 
   function videoModal(v) {
     var isNew = !v;
-    var chapters = [];
-    D.videos.forEach(function (x) {
-      if (v && x.course !== v.course) return;
-      if (chapters.indexOf(x.chapter) < 0) chapters.push(x.chapter);
-    });
     var m = RJ.modal(
       (isNew ? '動画を追加' : '動画を編集（' + v.row + '行目）'),
       '<div class="field"><label>コース</label>'
@@ -213,8 +208,9 @@
       + '<input id="mCourseNew" class="hidden" type="text" placeholder="新しいコース名" style="margin-top:8px">'
       + '<div class="hint">新しいコースを作ったら「📚 コース設定」でタグを設定してください。</div></div>'
       + '<div class="field"><label>チャプター（章）</label>'
-      + '<input id="mChapter" type="text" list="chapList" value="' + esc(v ? v.chapter : '') + '" placeholder="例：オンライン講義動画">'
-      + '<datalist id="chapList">' + chapters.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist></div>'
+      + '<select id="mChapter"></select>'
+      + '<input id="mChapterNew" class="hidden" type="text" placeholder="新しいチャプター名" style="margin-top:8px">'
+      + '<div class="hint" id="mChapterHint"></div></div>'
       + '<div class="field"><label>レッスンタイトル</label>'
       + '<input id="mTitle" type="text" value="' + esc(v ? v.title : '') + '" placeholder="例：第7回講義"></div>'
       + '<div class="field"><label>動画URL（Vimeo）</label>'
@@ -240,11 +236,14 @@
       function (close, setMsg) {
         var course = $('mCourse').value === '__new' ? $('mCourseNew').value.trim() : $('mCourse').value;
         if (!course) { setMsg('コース名を入力してください。'); return; }
+        if ($('mChapter').value === '__new' && !$('mChapterNew').value.trim()) {
+          setMsg('新しいチャプター名を入力してください。'); return;
+        }
         if (!$('mTitle').value.trim() && !$('mUrl').value.trim()) { setMsg('タイトルか動画URLを入力してください。'); return; }
         var p = {
           token: store.token(),
           course: course,
-          chapter: $('mChapter').value.trim(),
+          chapter: ($('mChapter').value === '__new' ? $('mChapterNew').value.trim() : $('mChapter').value),
           title: $('mTitle').value.trim(),
           url: $('mUrl').value.trim(),
           note: $('mNote').value,
@@ -260,10 +259,41 @@
         });
       }
     );
+    /** 選んだコースの中にあるチャプターだけを選択肢にする */
+    function fillChapters(course, keep) {
+      var list = [];
+      D.videos.forEach(function (x) {
+        if (x.course === course && list.indexOf(x.chapter) < 0) list.push(x.chapter);
+      });
+      $('mChapter').innerHTML =
+        list.map(function (n) {
+          return '<option value="' + esc(n) + '"' + (keep === n ? ' selected' : '') + '>' + esc(n) + '</option>';
+        }).join('')
+        + '<option value="__new"' + (!list.length || (keep && list.indexOf(keep) < 0) ? ' selected' : '') + '>＋ 新しいチャプターを作る</option>';
+      var isNew = $('mChapter').value === '__new';
+      $('mChapterNew').classList.toggle('hidden', !isNew);
+      if (isNew && keep && list.indexOf(keep) < 0) $('mChapterNew').value = keep;
+      $('mChapterHint').textContent = list.length
+        ? '「' + course + '」の中のチャプター（' + list.length + '件）から選べます。'
+        : 'このコースにはまだチャプターがありません。名前を入力してください。';
+    }
+
+    function currentCourse() {
+      return $('mCourse').value === '__new' ? $('mCourseNew').value.trim() : $('mCourse').value;
+    }
+
     $('mCourse').addEventListener('change', function () {
       $('mCourseNew').classList.toggle('hidden', $('mCourse').value !== '__new');
+      fillChapters(currentCourse(), '');
     });
+    $('mCourseNew').addEventListener('input', function () { fillChapters(currentCourse(), ''); });
+    $('mChapter').addEventListener('change', function () {
+      $('mChapterNew').classList.toggle('hidden', $('mChapter').value !== '__new');
+      if ($('mChapter').value === '__new') $('mChapterNew').focus();
+    });
+
     if (!v && D.courses.length) $('mCourse').value = D.courses[0].name;
+    fillChapters(currentCourse(), v ? v.chapter : '');
     return m;
   }
 
