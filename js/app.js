@@ -150,13 +150,14 @@
     return !!(RJ.CFG.PUSH_READY && RJ.CFG.FIREBASE && RJ.CFG.FIREBASE.projectId
       && 'Notification' in window && 'serviceWorker' in navigator);
   }
-  /** iPhoneはホーム画面に追加していないと通知を受け取れない */
-  function isIosNotStandalone() {
-    var ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    var standalone = window.navigator.standalone === true
+  /** iPhoneはホーム画面に追加していないと通知を受け取れない（判定は参考情報として使う） */
+  function isIos() { return /iPad|iPhone|iPod/.test(navigator.userAgent); }
+  function isStandalone() {
+    return window.navigator.standalone === true
       || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    return ios && !standalone;
   }
+  /** この端末で通知そのものが使えるか（推測ではなく実際の機能で判断する） */
+  function canNotify() { return ('Notification' in window) && ('serviceWorker' in navigator); }
 
   var fbLoading = null;
   function loadFirebase() {
@@ -230,20 +231,31 @@
       + 'スマホの通知でお知らせします。</p>'
       + '<div class="notice-box"><b>いまの状態：</b>'
       + (on ? '<span style="color:#1f7a5c">🔔 オン</span>' : '<span style="color:#61768a">🔕 オフ</span>')
-      + '</div>'
-      + (isIosNotStandalone()
+      + '<br><span class="hint">通知の機能：' + (canNotify() ? '使えます' : '見つかりません')
+      + '／ホーム画面から起動：' + (isStandalone() ? 'はい' : 'いいえ')
+      + (('Notification' in window) ? '／許可の状態：' + Notification.permission : '')
+      + '</span></div>'
+      + (!canNotify() && isIos()
         ? '<div class="notice-box"><b>iPhoneをお使いの方へ</b><br>'
-          + '通知を受け取るには、先に<b>ホーム画面へ追加</b>して、そこから開いてください（Safariの仕様です）。<br>'
-          + '追加のしかたは「📖 使い方ガイド」でご案内しています。</div>'
+          + 'この開き方では通知を受け取れません。<b>Safari</b>で開いて「共有」→<b>ホーム画面に追加</b>し、'
+          + '追加されたアイコンから開いてからお試しください。<br>'
+          + '<span class="hint">※iOS 16.4より前のiPhoneは通知に対応していません。</span></div>'
         : '')
-      + '<div class="hint" id="pushMsg"></div>';
+      + '<div class="hint" id="pushMsg">'
+      + (canNotify() ? '' : 'この端末では通知の機能が見つかりませんでした。')
+      + '</div>';
 
     var m = RJ.modal('通知の設定', body,
       function (close, setMsg) {
         if (on) {
           return pushDisable().then(function () { close(); showPush(); });
         }
-        if (isIosNotStandalone()) { setMsg('ホーム画面に追加してから、もう一度お試しください。'); return; }
+        if (!canNotify()) {
+          setMsg(isIos()
+            ? 'この開き方では通知を使えません。Safariで「ホーム画面に追加」し、そのアイコンから開いてお試しください。'
+            : 'お使いのブラウザが通知に対応していないようです。');
+          return;
+        }
         return pushEnable().then(function () {
           close();
           RJ.modal('通知をオンにしました', '<p style="margin:0">新しいお知らせが届いたときにお知らせします。</p>',

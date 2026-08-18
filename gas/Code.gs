@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.4.0
+ * VERSION: v1.4.1
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -9,7 +9,7 @@
  *
  * ★スプシは「リンクを知っている全員」共有をOFFにすること（パスワードが平文で入るため）。
  *
- * v1.4.0 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
+ * v1.4.1 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
  *              アカウント設定（表示名・パスワード変更）・LINE UIDの回収・uidログイン（既定OFF）
  */
 
@@ -51,7 +51,7 @@ const N_COLS = 10;
 // ===== ルーター =====
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: 'v1.4.0' });
+  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: 'v1.4.1' });
   return out_({ ok: false, error: 'post_only' });
 }
 
@@ -59,7 +59,7 @@ function doPost(e) {
   const p = (e && e.parameter) || {};
   try {
     switch (p.action) {
-      case 'ping':          return out_({ ok: true, msg: 'pong', version: 'v1.4.0' });
+      case 'ping':          return out_({ ok: true, msg: 'pong', version: 'v1.4.1' });
       case 'login':         return out_(apiLogin_(p));
       case 'uid_login':     return out_(apiUidLogin_(p));
       case 'first_check':   return out_(apiFirstCheck_(p));
@@ -1079,6 +1079,48 @@ function apiNewsPush_(p) {
     }
   }
   return { ok: true, sent: sent, failed: failed, total: tokens.length, removed: dead.length };
+}
+
+/**
+ * 【通知を使う前に1回だけ実行する】
+ * GASが外部（Firebase）へ通信する許可を取り、鍵の設定も点検する。
+ * エディタで関数「checkPush」を選んで▶実行 → 承認画面が出たら許可。
+ * 実行ログに「準備OK」と出れば、あとはアプリから通知を送れる。
+ */
+function checkPush() {
+  const out = { 手順: [] };
+
+  // ① 外部通信の承認をここで取る（この1行のために実行する）
+  try {
+    UrlFetchApp.fetch('https://oauth2.googleapis.com/token', { method: 'get', muteHttpExceptions: true });
+    out.手順.push('① 外部通信：OK');
+  } catch (err) {
+    out.手順.push('① 外部通信：NG → ' + err.message);
+    Logger.log(JSON.stringify(out, null, 2));
+    return out;
+  }
+
+  // ② 鍵が読めるか
+  const c = fcmCreds_();
+  if (!c) {
+    out.手順.push('② 鍵：NG → スクリプトプロパティ FCM_PRIVATE_KEY にサービスアカウントのJSONを丸ごと貼ってください');
+    Logger.log(JSON.stringify(out, null, 2));
+    return out;
+  }
+  out.手順.push('② 鍵：OK（project=' + c.project + ' / ' + c.mail + '）');
+
+  // ③ アクセストークンが取れるか
+  const auth = fcmAccessToken_();
+  out.手順.push(auth ? '③ Firebaseへの接続：OK' : '③ Firebaseへの接続：NG（鍵の形式をご確認ください）');
+
+  // ④ 通知先の端末数
+  const sh = pushSheet_();
+  const n = Math.max(0, sh.getLastRow() - 1);
+  out.手順.push('④ 通知をオンにしている端末：' + n + '台');
+
+  out.結果 = (auth ? '準備OK' : '未完了');
+  Logger.log(JSON.stringify(out, null, 2));
+  return out;
 }
 
 // ===== 名簿の補正 =====
