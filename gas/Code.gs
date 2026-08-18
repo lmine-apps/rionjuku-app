@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.4.1
+ * VERSION: v1.4.2
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -9,7 +9,7 @@
  *
  * ★スプシは「リンクを知っている全員」共有をOFFにすること（パスワードが平文で入るため）。
  *
- * v1.4.1 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
+ * v1.4.2 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
  *              アカウント設定（表示名・パスワード変更）・LINE UIDの回収・uidログイン（既定OFF）
  */
 
@@ -51,7 +51,7 @@ const N_COLS = 10;
 // ===== ルーター =====
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: 'v1.4.1' });
+  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: 'v1.4.2' });
   return out_({ ok: false, error: 'post_only' });
 }
 
@@ -59,7 +59,7 @@ function doPost(e) {
   const p = (e && e.parameter) || {};
   try {
     switch (p.action) {
-      case 'ping':          return out_({ ok: true, msg: 'pong', version: 'v1.4.1' });
+      case 'ping':          return out_({ ok: true, msg: 'pong', version: 'v1.4.2' });
       case 'login':         return out_(apiLogin_(p));
       case 'uid_login':     return out_(apiUidLogin_(p));
       case 'first_check':   return out_(apiFirstCheck_(p));
@@ -697,8 +697,29 @@ function apiAdminData_(p) {
     }),
     news: news_(),
     replies: replySummary_(),
+    push: pushSummary_(),
     quickLogin: isOn_(PropertiesService.getScriptProperties().getProperty('LINE_QUICK_LOGIN'))
   };
+}
+
+/** 通知をオンにしている端末を「メールアドレス→台数」でまとめる */
+function pushSummary_() {
+  const out = {};
+  try {
+    const sh = pushSheet_();
+    const last = sh.getLastRow();
+    if (last < 2) return out;
+    const vals = sh.getRange(2, 1, last - 1, 4).getValues();
+    vals.forEach(function (r) {
+      const t = s_(r[0]); if (!t) return;
+      const mail = email_(r[1]);
+      if (!out[mail]) out[mail] = { count: 0, last: '' };
+      out[mail].count++;
+      const at = s_(r[3]);
+      if (at > out[mail].last) out[mail].last = at;
+    });
+  } catch (err) { /* シートが無ければ空 */ }
+  return out;
 }
 
 function replySummary_() {
@@ -1043,7 +1064,9 @@ function apiNewsPush_(p) {
     if (s_(p.test)) { if (mail === g.user.email) tokens.push(t); return; }
     if (targetMails[mail]) tokens.push(t);
   });
-  if (!tokens.length) return { ok: false, error: 'no_tokens' };
+  if (!tokens.length) {
+    return { ok: false, error: 'no_tokens', forEmail: s_(p.test) ? g.user.email : '' };
+  }
 
   const body = String(hit.body || '').replace(/\s+/g, ' ').slice(0, 90);
   const url = s_(PropertiesService.getScriptProperties().getProperty('APP_URL'))

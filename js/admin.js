@@ -7,7 +7,7 @@
   var api = RJ.api, store = RJ.store, esc = RJ.esc;
   var $ = function (id) { return document.getElementById(id); };
 
-  var D = { videos: [], courses: [], students: [], news: [], replies: {}, orphanCourses: [], quickLogin: false };
+  var D = { videos: [], courses: [], students: [], news: [], replies: {}, push: {}, orphanCourses: [], quickLogin: false, me: null };
 
   // ---------- ログイン ----------
   $('loginForm').addEventListener('submit', function (ev) {
@@ -54,6 +54,8 @@
         D.students = res.students || [];
         D.news = res.news || [];
         D.replies = res.replies || {};
+        D.push = res.push || {};
+        D.me = res.user || null;
         D.orphanCourses = res.orphanCourses || [];
         D.quickLogin = !!res.quickLogin;
         $('scLogin').classList.add('hidden');
@@ -458,7 +460,13 @@
       '<p style="margin-top:0;font-size:14px">このお知らせを、通知をオンにしている端末へ送ります。</p>'
       + '<div class="notice-box"><b>宛先：</b>' + esc(who) + '<br>'
       + '<b>見出し：</b>' + esc(n.title) + '</div>'
-      + '<p style="font-size:13px">まず<b>「自分にテスト」</b>で届き方をご確認ください。</p>'
+      + '<p style="font-size:13px">まず<b>「自分にテスト」</b>で届き方をご確認ください。'
+      + '<br><span class="hint">テストの宛先＝いまログイン中の '
+      + esc((D.me && D.me.email) || '') + ' の端末'
+      + ((D.me && D.push[String(D.me.email).toLowerCase()])
+          ? '（登録あり ' + D.push[String(D.me.email).toLowerCase()].count + '台）'
+          : '（この端末はまだ通知オンになっていません）')
+      + '</span></p>'
       + '<div class="hint" id="pushResult"></div>'
       + '<div style="display:flex;gap:10px;margin-top:12px">'
       + '<button class="btn ghost" id="pushTest" type="button">🧪 自分にテスト</button></div>',
@@ -487,7 +495,13 @@
   }
   function pushErr(res) {
     if (res && res.error === 'no_fcm_credentials') return 'Firebaseの鍵（FCM_PRIVATE_KEY）が未設定です。';
-    if (res && res.error === 'no_tokens') return 'まだ通知をオンにしている端末がありません。';
+    if (res && res.error === 'no_tokens') {
+      if (res.forEmail) {
+        return 'いまログイン中の「' + res.forEmail + '」の端末が登録されていません。'
+          + 'スマホで通知をオンにしたアカウントでログインし直すか、「📢 全員に送信」でお試しください。';
+      }
+      return 'まだ通知をオンにしている端末がありません。';
+    }
     return RJ.errMsg(res);
   }
 
@@ -501,11 +515,13 @@
       if (!w) return true;
       return (s.name + ' ' + s.email + ' ' + s.tags).toLowerCase().indexOf(w) >= 0;
     });
-    $('sCount').textContent = '全' + D.students.length + '名中 ' + rows.length + '名を表示';
+    var pushOn = Object.keys(D.push || {}).length;
+    $('sCount').textContent = '全' + D.students.length + '名中 ' + rows.length + '名を表示'
+      + '（🔔 通知オン ' + pushOn + '名）';
     if (!rows.length) { $('studentTable').innerHTML = '<div class="empty">閲覧者がまだ登録されていません。</div>'; return; }
 
     $('studentTable').innerHTML = '<div class="scrollx"><table class="grid"><thead><tr>'
-      + '<th>行</th><th>名前</th><th>メールアドレス</th><th>パスワード</th><th>タグ（視聴できるコース）</th><th>状態</th><th>LINE</th><th></th>'
+      + '<th>行</th><th>名前</th><th>メールアドレス</th><th>パスワード</th><th>タグ（視聴できるコース）</th><th>状態</th><th>通知</th><th>LINE</th><th></th>'
       + '</tr></thead><tbody>'
       + rows.map(function (s) {
         return '<tr>'
@@ -515,6 +531,11 @@
           + '<td class="narrow"><code>' + esc(s.pass || '—') + '</code></td>'
           + '<td>' + (s.tags ? s.tags.split(',').map(function (t) { return '<span class="tag-chip">' + esc(t.trim()) + '</span>'; }).join('') : '<span class="hint">未設定</span>') + '</td>'
           + '<td class="narrow">' + (/停止|無効|退会/.test(s.status) ? '<span class="pill off">停止</span>' : '<span class="pill ok">有効</span>') + '</td>'
+          + '<td class="narrow">' + (function () {
+              var p = D.push[s.email.toLowerCase()];
+              return p ? '<span class="pill ok" title="' + esc(p.last) + '">🔔 ' + p.count + '台</span>'
+                       : '<span class="hint">—</span>';
+            })() + '</td>'
           + '<td class="narrow">' + (s.uid ? '<span class="pill ok">連携済</span>' : '<span class="hint">—</span>') + '</td>'
           + '<td class="narrow">'
           + '<button class="mini" data-sedit="' + s.row + '" type="button">編集</button>'
