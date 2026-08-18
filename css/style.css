@@ -678,6 +678,7 @@ table.grid code { font-size: 12px; color: var(--text-mid); }
 }
 .tagpick.on span { background: rgba(255, 255, 255, .2); color: #fff; }
 .tagpick.all.on { background: linear-gradient(135deg, #2c8a95, var(--sky-500)); }
+.tagpick.staff.on { background: linear-gradient(135deg, #6b5fa8, #9c8fd0); }
 
 /* ---------- 読み込み中のオーバーレイ ---------- */
 .loading {

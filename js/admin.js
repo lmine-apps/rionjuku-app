@@ -349,6 +349,8 @@
       + '<div class="field"><label>誰に見せるか（宛先）</label>'
       + '<div class="pickers" id="nTargets">'
       + '<button class="tagpick all' + (!n || !n.targets.length ? ' on' : '') + '" data-tag="" type="button">👥 全員</button>'
+      + '<button class="tagpick staff' + (n && n.targets.indexOf('admin') >= 0 ? ' on' : '') + '" data-tag="admin" type="button">🔒 運営だけ<span>'
+      + D.students.filter(function (s) { return s.tags.split(',').some(function (x) { return x.trim() === 'admin'; }); }).length + '</span></button>'
       + tags.map(function (t) {
           var on = n && n.targets.indexOf(t) >= 0;
           var cnt = D.students.filter(function (s) {
@@ -409,7 +411,8 @@
         var mine = s.tags.split(',').map(function (x) { return x.trim(); });
         return picked.some(function (t) { return mine.indexOf(t) >= 0; });
       }).length;
-      hint.textContent = '選択中：' + picked.join('／') + ' → ' + n + '名に表示されます。';
+      hint.textContent = '選択中：' + picked.join('／') + ' → ' + n + '名に表示されます。'
+        + (picked.length === 1 && picked[0] === 'admin' ? '（受講生には表示されません。通知のテストに使えます）' : '');
     }
     Array.prototype.forEach.call(wrap.querySelectorAll('.tagpick'), function (b) {
       b.addEventListener('click', function () {
