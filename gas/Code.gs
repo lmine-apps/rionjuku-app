@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.4.2
+ * VERSION: v1.5.0
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -9,7 +9,7 @@
  *
  * ★スプシは「リンクを知っている全員」共有をOFFにすること（パスワードが平文で入るため）。
  *
- * v1.4.2 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
+ * v1.5.0 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
  *              アカウント設定（表示名・パスワード変更）・LINE UIDの回収・uidログイン（既定OFF）
  */
 
@@ -36,7 +36,8 @@ const V_TAG    = 6; // F タグ（空欄ならコース設定のタグを継承�
 const V_START  = 7; // G 視聴開始（空欄＝すぐ観られる）
 const V_END    = 8; // H 視聴終了（空欄＝無期限。その日の23:59まで）
 const V_HIDE   = 9; // I 非公開（"非公開" と書くと受講生には出ない）
-const V_COLS   = 9;
+const V_BLOCK  = 10; // J 追加コンテンツ（[文章]/[画像]/[音声] を並べたもの）
+const V_COLS   = 10;
 
 // 受講生シートの列
 const S_NAME = 1, S_MAIL = 2, S_PASS = 3, S_TAGS = 4, S_STATUS = 5, S_MEMO = 6, S_JOINED = 7,
@@ -51,7 +52,7 @@ const N_COLS = 10;
 // ===== ルーター =====
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: 'v1.4.2' });
+  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: 'v1.5.0' });
   return out_({ ok: false, error: 'post_only' });
 }
 
@@ -59,7 +60,7 @@ function doPost(e) {
   const p = (e && e.parameter) || {};
   try {
     switch (p.action) {
-      case 'ping':          return out_({ ok: true, msg: 'pong', version: 'v1.4.2' });
+      case 'ping':          return out_({ ok: true, msg: 'pong', version: 'v1.5.0' });
       case 'login':         return out_(apiLogin_(p));
       case 'uid_login':     return out_(apiUidLogin_(p));
       case 'first_check':   return out_(apiFirstCheck_(p));
@@ -320,6 +321,7 @@ function videos_() {
       url: url,
       note: note,
       tag: s_(r[V_TAG - 1]),
+      blocks: String(r[V_BLOCK - 1] == null ? '' : r[V_BLOCK - 1]),
       hidden: isOff_(r[V_HIDE - 1]) || /^(非公開|hidden)$/i.test(s_(r[V_HIDE - 1])),
       start: s_(r[V_START - 1]) ? fmtCell_(r[V_START - 1]) : '',
       end: s_(r[V_END - 1]) ? fmtCell_(r[V_END - 1]) : '',
@@ -559,6 +561,7 @@ function apiData_(p) {
       // 公開前・期限切れの動画URLはブラウザへ渡さない
       url: (v.state === 'open') ? v.url : '',
       note: v.note,
+      blocks: v.blocks,
       state: v.state,
       startAt: v.startAt,
       endAt: v.endAt,
@@ -762,7 +765,8 @@ function apiVideoAdd_(p) {
     const row = after + 1;
     sh.getRange(row, 1, 1, V_COLS).setValues([[
       course, chapter, s_(p.title), s_(p.url), String(p.note == null ? '' : p.note),
-      s_(p.tag), s_(p.start), s_(p.end), s_(p.hidden) ? '非公開' : ''
+      s_(p.tag), s_(p.start), s_(p.end), s_(p.hidden) ? '非公開' : '',
+      String(p.blocks == null ? '' : p.blocks)
     ]]);
     return { ok: true, row: row };
   } finally { lock.releaseLock(); }
@@ -789,6 +793,7 @@ function apiVideoUpdate_(p) {
     if (p.hidden  != null) sh.getRange(row, V_HIDE).setValue(s_(p.hidden) ? '非公開' : '');
     if (p.start   != null) sh.getRange(row, V_START).setValue(s_(p.start));
     if (p.end     != null) sh.getRange(row, V_END).setValue(s_(p.end));
+    if (p.blocks  != null) sh.getRange(row, V_BLOCK).setValue(String(p.blocks));
     return { ok: true };
   } finally { lock.releaseLock(); }
 }
@@ -1174,6 +1179,7 @@ function apiSetup_(p) {
 
   const heads = {};
   heads[V_TAG] = 'タグ'; heads[V_START] = '視聴開始'; heads[V_END] = '視聴終了'; heads[V_HIDE] = '非公開';
+  heads[V_BLOCK] = '追加コンテンツ';
   Object.keys(heads).forEach(function (col) {
     if (!s_(sh.getRange(1, Number(col)).getValue())) sh.getRange(1, Number(col)).setValue(heads[col]);
   });

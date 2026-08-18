@@ -227,6 +227,14 @@
       + '<div class="field"><label>補足＆タイム</label>'
       + '<textarea id="mNote" rows="6" placeholder="0:00:01　オープニング&#10;0:12:30　本編">' + esc(v ? v.note : '') + '</textarea>'
       + '<div class="hint">「0:12:30　見出し」の形で書いた行は、視聴ページで目次ボタンになります。</div></div>'
+      + '<div class="field"><label>追加コンテンツ（動画の下に、この順番で表示されます）</label>'
+      + '<div id="mBlocks" class="blocks"></div>'
+      + '<div class="block-add">'
+      + '<button class="mini" data-add="text" type="button">＋ 文章</button>'
+      + '<button class="mini" data-add="image" type="button">＋ 画像</button>'
+      + '<button class="mini" data-add="audio" type="button">＋ 音声（MP3）</button>'
+      + '</div>'
+      + '<div class="hint">Googleドライブの共有リンクを貼れば、表示できる形に自動で直します。</div></div>'
       + '<div class="row2">'
       + '<div class="field"><label>この動画だけのタグ（任意）</label>'
       + '<input id="mTag" type="text" value="' + esc(v ? v.tag : '') + '" placeholder="空欄＝コース設定のタグ"></div>'
@@ -250,7 +258,8 @@
           tag: $('mTag').value.trim(),
           hidden: $('mHidden').value,
           start: $('mStart').value.trim(),
-          end: $('mEnd').value.trim()
+          end: $('mEnd').value.trim(),
+          blocks: (m && m.getBlocks) ? m.getBlocks() : ''
         };
         if (!isNew) { p.row = v.row; p.expectTitle = v.title; }
         return api(isNew ? 'video_add' : 'video_update', p).then(function (res) {
@@ -294,6 +303,62 @@
 
     if (!v && D.courses.length) $('mCourse').value = D.courses[0].name;
     fillChapters(currentCourse(), v ? v.chapter : '');
+
+    // ---- 追加コンテンツ（文章・画像・音声）----
+    var blocks = RJ.parseBlocks(v ? v.blocks : '');
+    function drawBlocks() {
+      if (!blocks.length) {
+        $('mBlocks').innerHTML = '<div class="block-empty">まだありません。下のボタンで追加できます。</div>';
+        return;
+      }
+      $('mBlocks').innerHTML = blocks.map(function (b, i) {
+        var head = '<div class="block-head"><span class="block-kind ' + b.type + '">'
+          + (b.type === 'image' ? '🖼 画像' : b.type === 'audio' ? '🎵 音声' : '✏️ 文章') + '</span>'
+          + '<span class="sp"></span>'
+          + '<button class="mini" data-up="' + i + '" type="button"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
+          + '<button class="mini" data-down="' + i + '" type="button"' + (i === blocks.length - 1 ? ' disabled' : '') + '>↓</button>'
+          + '<button class="mini danger" data-del="' + i + '" type="button">削除</button></div>';
+        var body = (b.type === 'text')
+          ? '<textarea data-val="' + i + '" rows="4" placeholder="ここに文章を書きます">' + esc(b.value) + '</textarea>'
+          : '<input data-val="' + i + '" type="url" value="' + esc(b.value) + '" placeholder="'
+            + (b.type === 'image' ? '画像のURL（https://…）' : '音声ファイルのURL（https://….mp3）') + '">';
+        var prev = (b.type === 'image' && b.value)
+          ? '<img class="block-prev" src="' + esc(RJ.fixDriveUrl(b.value, 'image')) + '" alt="">'
+          : (b.type === 'audio' && b.value)
+            ? '<audio class="block-prev" controls preload="none" src="' + esc(RJ.fixDriveUrl(b.value, 'audio')) + '"></audio>'
+            : '';
+        return '<div class="block">' + head + body + prev + '</div>';
+      }).join('');
+
+      Array.prototype.forEach.call($('mBlocks').querySelectorAll('[data-val]'), function (el) {
+        el.addEventListener('input', function () { blocks[Number(el.dataset.val)].value = el.value; });
+        el.addEventListener('change', function () {
+          var i = Number(el.dataset.val);
+          if (blocks[i].type !== 'text') { blocks[i].value = el.value.trim(); drawBlocks(); }
+        });
+      });
+      ['up', 'down', 'del'].forEach(function (act) {
+        Array.prototype.forEach.call($('mBlocks').querySelectorAll('[data-' + act + ']'), function (b) {
+          b.addEventListener('click', function () {
+            var i = Number(b.dataset[act]);
+            if (act === 'del') blocks.splice(i, 1);
+            if (act === 'up') blocks.splice(i - 1, 0, blocks.splice(i, 1)[0]);
+            if (act === 'down') blocks.splice(i + 1, 0, blocks.splice(i, 1)[0]);
+            drawBlocks();
+          });
+        });
+      });
+    }
+    Array.prototype.forEach.call(m.host.querySelectorAll('[data-add]'), function (b) {
+      b.addEventListener('click', function () {
+        blocks.push({ type: b.dataset.add, value: '' });
+        drawBlocks();
+        var last = $('mBlocks').querySelector('.block:last-child [data-val]');
+        if (last) last.focus();
+      });
+    });
+    drawBlocks();
+    m.getBlocks = function () { return RJ.buildBlocks(blocks); };
     return m;
   }
 

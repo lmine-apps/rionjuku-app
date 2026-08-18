@@ -654,6 +654,9 @@
       $('noteCard').classList.add('hidden'); $('noteText').innerHTML = '';
     }
 
+    // 追加コンテンツ（文章・画像・音声）
+    renderBlocks(v.blocks);
+
     // 動画の下：同じ章の一覧
     renderChapList(item.chapter);
 
@@ -670,6 +673,23 @@
     $('nextBtn').disabled = (i >= state.flat.length - 1);
     renderSideChapters();
     window.scrollTo(0, 0);
+  }
+
+  /** 運営が並べた「文章・画像・音声」をそのまま順番に出す */
+  function renderBlocks(raw) {
+    var list = RJ.parseBlocks(raw);
+    if (!list.length) { $('blockCard').classList.add('hidden'); $('blockBody').innerHTML = ''; return; }
+    $('blockCard').classList.remove('hidden');
+    $('blockBody').innerHTML = list.map(function (b) {
+      if (b.type === 'image') {
+        return '<figure class="bk-img"><img src="' + esc(RJ.fixDriveUrl(b.value, 'image')) + '" alt="" loading="lazy"></figure>';
+      }
+      if (b.type === 'audio') {
+        return '<div class="bk-audio"><audio controls preload="none" src="'
+          + esc(RJ.fixDriveUrl(b.value, 'audio')) + '"></audio></div>';
+      }
+      return '<div class="bk-text">' + RJ.linkify(b.value) + '</div>';
+    }).join('');
   }
 
   function renderChapList(chapter) {

@@ -14,8 +14,10 @@
     return t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2) + '-' + ('0' + t.getDate()).slice(-2);
   }
 
+  var BLK_SAMPLE = '[文章] 入学式のレジュメです。印刷してお使いください。\n[画像] https://placehold.jp/2ea9c4/ffffff/900x500.png?text=%E8%B3%87%E6%96%99\n[文章] 補足のボイスはこちらです。\n[音声] https://upload.wikimedia.org/wikipedia/commons/c/c8/Example.ogg';
+
   var VIDEOS = [
-    { row: 2,  course: '凛穏塾2.5期生', chapter: '入学式', title: '入学式', url: 'https://vimeo.com/1134091134', note: '0:00:01　入学式の流れ、運営メンバー紹介\n0:13:44　オリエンテーション\n0:44:15　凛穏塾の心得、学び方', tag: '', hidden: false, start: '', end: '' },
+    { row: 2,  course: '凛穏塾2.5期生', chapter: '入学式', title: '入学式', url: 'https://vimeo.com/1134091134', note: '0:00:01　入学式の流れ、運営メンバー紹介\n0:13:44　オリエンテーション\n0:44:15　凛穏塾の心得、学び方', tag: '', hidden: false, start: '', end: '', blocks: BLK_SAMPLE },
     { row: 3,  course: '凛穏塾2.5期生', chapter: 'オンライン講義動画', title: '第1回講義', url: 'https://vimeo.com/1132735832', note: '', tag: '', hidden: false, start: '', end: '' },
     { row: 4,  course: '凛穏塾2.5期生', chapter: 'オンライン講義動画', title: '第2回講義', url: 'https://vimeo.com/1136817063', note: '0:00:01　人生に起こるすべてのお悩み解決方法\n0:02:44　お釈迦様の教え／一切皆苦\n0:14:38　苦しみの乗り越え方', tag: '', hidden: false, start: '', end: d(5) },
     { row: 5,  course: '凛穏塾2.5期生', chapter: 'オンライン講義動画', title: '第3回講義（公開前の見え方）', url: 'https://vimeo.com/1142023382', note: '', tag: '', hidden: false, start: d(7), end: '' },
@@ -96,7 +98,7 @@
         if (!ch) { ch = { name: v.chapter, videos: [] }; chaps.push(ch); }
         ch.videos.push({
           id: v.row, title: v.title, url: (win.state === 'open') ? v.url : '',
-          note: v.note, state: win.state, startAt: win.startAt, endAt: win.endAt,
+          note: v.note, blocks: v.blocks || '', state: win.state, startAt: win.startAt, endAt: win.endAt,
           daysLeft: win.daysLeft, hidden: v.hidden
         });
       });
@@ -118,7 +120,7 @@
       var win = windowState(v.start, v.end);
       return {
         row: v.row, course: v.course, chapter: v.chapter, title: v.title, url: v.url, note: v.note,
-        tag: v.tag, hidden: v.hidden, start: v.start, end: v.end,
+        tag: v.tag, hidden: v.hidden, start: v.start, end: v.end, blocks: v.blocks || '',
         state: win.state, startAt: win.startAt, endAt: win.endAt, daysLeft: win.daysLeft
       };
     });

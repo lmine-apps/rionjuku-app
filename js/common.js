@@ -214,6 +214,51 @@
     try { return localStorage.getItem('rj_uid') || ''; } catch (e) { return ''; }
   }
 
+  /**
+   * 追加コンテンツ（文章・画像・音声）の読み書き
+   * スプシには人が読める形で入れる：
+   *   [文章] ここに本文（次の行からも本文の続き）
+   *   [画像] https://…
+   *   [音声] https://…
+   */
+  var BLOCK_TYPES = { text: '文章', image: '画像', audio: '音声' };
+  function parseBlocks(raw) {
+    var out = [], cur = null;
+    String(raw || '').split(/\r\n|\r|\n/).forEach(function (line) {
+      var m = line.match(/^\s*\[(文章|テキスト|text|画像|image|img|音声|音源|mp3|audio)\]\s?(.*)$/i);
+      if (m) {
+        var k = m[1].toLowerCase();
+        var type = /画像|image|img/i.test(k) ? 'image' : (/音声|音源|mp3|audio/i.test(k) ? 'audio' : 'text');
+        cur = { type: type, value: m[2] || '' };
+        out.push(cur);
+      } else if (cur && cur.type === 'text') {
+        cur.value += '\n' + line;
+      } else if (line.trim()) {
+        cur = { type: 'text', value: line };
+        out.push(cur);
+      }
+    });
+    return out.filter(function (b) { return String(b.value).trim() !== ''; })
+              .map(function (b) {
+                return { type: b.type, value: String(b.value).replace(/^\n+|\n+$/g, '') };
+              });
+  }
+  function buildBlocks(list) {
+    return (list || [])
+      .filter(function (b) { return String(b.value || '').trim() !== ''; })
+      .map(function (b) { return '[' + BLOCK_TYPES[b.type] + '] ' + String(b.value).trim(); })
+      .join('\n');
+  }
+  /** Googleドライブの共有リンクを、そのまま表示できる形に直す */
+  function fixDriveUrl(url, kind) {
+    var u = String(url || '').trim();
+    var m = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?[^#]*id=)([A-Za-z0-9_-]{20,})/);
+    if (!m) return u;
+    return (kind === 'image')
+      ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1000'
+      : 'https://drive.google.com/uc?export=download&id=' + m[1];
+  }
+
   /** 共通モーダル（受講生画面・運営画面の両方で使う） */
   function modal(title, bodyHtml, onSave, opts) {
     opts = opts || {};
@@ -256,6 +301,7 @@
   w.RJ = {
     api: api, store: store, errMsg: errMsg, parseVimeo: parseVimeo, parseMarks: parseMarks,
     esc: esc, linkify: linkify, jpDate: jpDate, pickUid: pickUid, modal: modal,
+    parseBlocks: parseBlocks, buildBlocks: buildBlocks, fixDriveUrl: fixDriveUrl, BLOCK_TYPES: BLOCK_TYPES,
     CFG: CFG, MOCK: MOCK
   };
 
