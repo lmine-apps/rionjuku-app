@@ -680,6 +680,10 @@ table.grid code { font-size: 12px; color: var(--text-mid); }
 .tagpick.all.on { background: linear-gradient(135deg, #2c8a95, var(--sky-500)); }
 .tagpick.staff.on { background: linear-gradient(135deg, #6b5fa8, #9c8fd0); }
 
+.filters { margin: -4px 0 14px; }
+.filters .tagpick { padding: 7px 13px; font-size: 12.5px; }
+.filter-sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 4px; }
+
 /* ---------- 読み込み中のオーバーレイ ---------- */
 .loading {
   position: fixed; inset: 0; z-index: 999990; display: grid; place-items: center;

@@ -65,6 +65,7 @@
         renderCourseFilter();
         renderVideos();
         renderNews();
+        renderStudentFilters();
         renderStudents();
         renderCourses();
         openFromQuery();
@@ -506,17 +507,68 @@
   }
 
   // ---------- 閲覧者 ----------
+  var sFilter = { tags: [], push: false, line: false, stopped: false };
   $('sWord').addEventListener('input', renderStudents);
+
+  /** 絞り込みボタン（タグ・通知・LINE・停止） */
+  function renderStudentFilters() {
+    function count(fn) { return D.students.filter(fn).length; }
+    function hasTag(s, t) { return s.tags.split(',').some(function (x) { return x.trim() === t; }); }
+    var tags = allTags();
+    if (D.students.some(function (s) { return hasTag(s, 'admin'); })) tags = tags.concat(['admin']);
+
+    $('sFilters').innerHTML =
+      '<button class="tagpick all' + (!sFilter.tags.length && !sFilter.push && !sFilter.line && !sFilter.stopped ? ' on' : '')
+        + '" data-f="clear" type="button">すべて<span>' + D.students.length + '</span></button>'
+      + tags.map(function (t) {
+          return '<button class="tagpick' + (sFilter.tags.indexOf(t) >= 0 ? ' on' : '') + '" data-tag="' + esc(t) + '" type="button">'
+            + esc(t) + '<span>' + count(function (s) { return hasTag(s, t); }) + '</span></button>';
+        }).join('')
+      + '<span class="filter-sep"></span>'
+      + '<button class="tagpick staff' + (sFilter.push ? ' on' : '') + '" data-f="push" type="button">🔔 通知オン<span>'
+        + Object.keys(D.push || {}).length + '</span></button>'
+      + '<button class="tagpick staff' + (sFilter.line ? ' on' : '') + '" data-f="line" type="button">📱 LINE連携<span>'
+        + count(function (s) { return !!s.uid; }) + '</span></button>'
+      + '<button class="tagpick staff' + (sFilter.stopped ? ' on' : '') + '" data-f="stopped" type="button">⛔ 停止<span>'
+        + count(function (s) { return /停止|無効|退会/.test(s.status); }) + '</span></button>';
+
+    Array.prototype.forEach.call($('sFilters').querySelectorAll('.tagpick'), function (b) {
+      b.addEventListener('click', function () {
+        var f = b.dataset.f;
+        if (f === 'clear') { sFilter = { tags: [], push: false, line: false, stopped: false }; }
+        else if (f) { sFilter[f] = !sFilter[f]; }
+        else {
+          var t = b.dataset.tag, i = sFilter.tags.indexOf(t);
+          if (i >= 0) sFilter.tags.splice(i, 1); else sFilter.tags.push(t);
+        }
+        renderStudentFilters();
+        renderStudents();
+      });
+    });
+  }
   $('addStudentBtn').addEventListener('click', function () { studentModal(null); });
 
   function renderStudents() {
     var w = $('sWord').value.trim().toLowerCase();
     var rows = D.students.filter(function (s) {
-      if (!w) return true;
-      return (s.name + ' ' + s.email + ' ' + s.tags).toLowerCase().indexOf(w) >= 0;
+      if (w && (s.name + ' ' + s.email + ' ' + s.tags).toLowerCase().indexOf(w) < 0) return false;
+      if (sFilter.tags.length) {
+        var mine = s.tags.split(',').map(function (x) { return x.trim(); });
+        if (!sFilter.tags.some(function (t) { return mine.indexOf(t) >= 0; })) return false;
+      }
+      if (sFilter.push && !D.push[s.email.toLowerCase()]) return false;
+      if (sFilter.line && !s.uid) return false;
+      if (sFilter.stopped && !/停止|無効|退会/.test(s.status)) return false;
+      return true;
     });
     var pushOn = Object.keys(D.push || {}).length;
+    var cond = [];
+    if (sFilter.tags.length) cond.push(sFilter.tags.join('／'));
+    if (sFilter.push) cond.push('通知オン');
+    if (sFilter.line) cond.push('LINE連携');
+    if (sFilter.stopped) cond.push('停止');
     $('sCount').textContent = '全' + D.students.length + '名中 ' + rows.length + '名を表示'
+      + (cond.length ? '｜条件：' + cond.join(' + ') : '')
       + '（🔔 通知オン ' + pushOn + '名）';
     if (!rows.length) { $('studentTable').innerHTML = '<div class="empty">閲覧者がまだ登録されていません。</div>'; return; }
 
