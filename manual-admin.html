@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>運営の手順書｜凛穏塾 動画視聴アプリ</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+:root {
+  --ground:    #eaf4fb;
+  --card:      #ffffff;
+  --card-soft: #f4fafd;
+  --ink:       #172b3d;
+  --ink-soft:  #5f7387;
+  --ink-faint: #93a6b6;
+  --line:      #d5e4ef;
+  --navy:      #12345a;
+  --navy-dk:   #0b203d;
+  --sky:       #2e93cf;
+  --sky-soft:  #e5f5fd;
+  --green:     #1f7a5c;
+  --green-soft:#e6f3ee;
+  --warn:      #c0503f;
+  --warn-soft: #fdf0ed;
+  --amber:     #9a6b12;
+  --amber-soft:#fbf3e0;
+  --shadow:    0 10px 30px rgba(7, 23, 44, .13);
+  --serif: "Yu Mincho", YuMincho, "Hiragino Mincho ProN", "Noto Serif JP", "MS PMincho", serif;
+  --sans: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", YuGothic, Meiryo, system-ui, sans-serif;
+  --num: Georgia, "Times New Roman", serif;
+  --mono: Consolas, "Cascadia Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:#07172a; --card:#0e2338; --card-soft:#142a41;
+    --ink:#e6eef5; --ink-soft:#9db1c3; --ink-faint:#6b8299; --line:#22405c;
+    --navy:#9fc9e8; --navy-dk:#cfe6f6; --sky:#62b7e7; --sky-soft:#10293d;
+    --green:#6cc39f; --green-soft:#102b23; --warn:#e0917f; --warn-soft:#33201c;
+    --amber:#d1a95f; --amber-soft:#2b2312;
+    --shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:#07172a; --card:#0e2338; --card-soft:#142a41;
+  --ink:#e6eef5; --ink-soft:#9db1c3; --ink-faint:#6b8299; --line:#22405c;
+  --navy:#9fc9e8; --navy-dk:#cfe6f6; --sky:#62b7e7; --sky-soft:#10293d;
+  --green:#6cc39f; --green-soft:#102b23; --warn:#e0917f; --warn-soft:#33201c;
+  --amber:#d1a95f; --amber-soft:#2b2312;
+  --shadow:0 10px 30px rgba(0,0,0,.5);
+}
+
+body { background: var(--ground); color: var(--ink); font-family: var(--sans);
+  line-height: 1.9; font-size: 15.5px; -webkit-text-size-adjust: 100%; }
+
+/* ---------- 表紙 ---------- */
+.cover { background: linear-gradient(160deg, #0b203d 0%, #12345a 55%, #1d5b8c 100%);
+  color: #fff; padding: 54px 22px 46px; text-align: center; position: relative; overflow: hidden; }
+.cover::after { content: ""; position: absolute; inset: auto -20% -60% -20%; height: 200px;
+  background: radial-gradient(ellipse at center, rgba(98,183,231,.35), transparent 70%); }
+.cover__kicker { font-family: var(--num); letter-spacing: .32em; font-size: 11px;
+  opacity: .8; text-transform: uppercase; }
+.cover__title { font-family: var(--serif); font-size: 29px; font-weight: 600;
+  margin: 12px 0 10px; letter-spacing: .06em; line-height: 1.5; }
+.cover__sub { font-size: 14px; opacity: .88; margin: 0 auto; max-width: 30em; }
+.cover__meta { margin-top: 22px; font-family: var(--num); font-size: 11.5px; opacity: .62; }
+
+/* ---------- 目次 ---------- */
+.toc { max-width: 860px; margin: -26px auto 0; padding: 0 16px; position: relative; z-index: 2; }
+.toc__box { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: var(--shadow); padding: 18px 20px; }
+.toc__t { font-family: var(--serif); font-size: 14px; color: var(--ink-soft);
+  letter-spacing: .16em; margin: 0 0 10px; }
+.toc__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.toc__list a { display: flex; gap: 10px; align-items: baseline; text-decoration: none;
+  color: var(--ink); padding: 7px 8px; border-radius: 8px; font-size: 14.5px; }
+.toc__list a:hover { background: var(--sky-soft); }
+.toc__no { font-family: var(--num); color: var(--sky); font-size: 13px; min-width: 1.4em; }
+
+/* ---------- 本文 ---------- */
+.wrap { max-width: 860px; margin: 0 auto; padding: 30px 16px 90px; }
+.sec { margin: 44px 0 0; scroll-margin-top: 14px; }
+.sec__head { display: flex; align-items: baseline; gap: 12px; border-bottom: 2px solid var(--navy);
+  padding-bottom: 8px; margin-bottom: 6px; }
+.sec__no { font-family: var(--num); font-size: 26px; color: var(--sky); line-height: 1; }
+.sec__title { font-family: var(--serif); font-size: 20px; font-weight: 600; margin: 0;
+  letter-spacing: .04em; }
+.sec__lead { color: var(--ink-soft); font-size: 14.5px; margin: 12px 0 0; }
+
+h3 { font-family: var(--serif); font-size: 16.5px; margin: 30px 0 8px; letter-spacing: .03em;
+  padding-left: 12px; border-left: 4px solid var(--sky); }
+p { margin: 10px 0; }
+b, strong { color: var(--navy-dk); font-weight: 700; }
+a { color: var(--sky); }
+code { font-family: var(--mono); font-size: .88em; background: var(--sky-soft);
+  padding: 2px 6px; border-radius: 5px; color: var(--navy-dk); word-break: break-all; }
+
+/* ---------- カード・囲み ---------- */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 13px;
+  padding: 16px 18px; margin: 16px 0; box-shadow: 0 2px 8px rgba(7,23,44,.05); }
+.card__t { font-family: var(--serif); font-size: 15.5px; margin: 0 0 8px; color: var(--navy-dk); }
+.note { border-radius: 11px; padding: 12px 16px; margin: 14px 0; font-size: 14.5px;
+  border-left: 4px solid var(--sky); background: var(--sky-soft); }
+.note b { display: block; margin-bottom: 2px; }
+.note--warn  { border-left-color: var(--warn);  background: var(--warn-soft); }
+.note--ok    { border-left-color: var(--green); background: var(--green-soft); }
+.note--amber { border-left-color: var(--amber); background: var(--amber-soft); }
+
+/* ---------- 手順 ---------- */
+.steps { list-style: none; counter-reset: st; margin: 16px 0; padding: 0; }
+.steps > li { counter-increment: st; position: relative; padding: 2px 0 16px 46px; }
+.steps > li::before { content: counter(st); position: absolute; left: 0; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--navy); color: #fff;
+  font-family: var(--num); font-size: 15px; display: flex; align-items: center;
+  justify-content: center; }
+.steps > li::after { content: ""; position: absolute; left: 15px; top: 34px; bottom: 2px;
+  width: 1px; background: var(--line); }
+.steps > li:last-child::after { display: none; }
+.steps b { display: block; }
+
+/* ---------- 表 ---------- */
+.tablewrap { overflow-x: auto; margin: 16px 0; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--card);
+  border-radius: 10px; overflow: hidden; min-width: 460px; }
+th, td { border-bottom: 1px solid var(--line); padding: 9px 12px; text-align: left;
+  vertical-align: top; }
+th { background: var(--sky-soft); color: var(--navy-dk); font-weight: 700; white-space: nowrap; }
+td code { background: transparent; padding: 0; }
+
+/* ---------- 画面イメージ（共通の枠） ---------- */
+.shot { margin: 20px 0 24px; }
+.shot__cap { font-size: 12.5px; color: var(--ink-faint); text-align: center;
+  margin-top: 9px; font-family: var(--num); letter-spacing: .08em; }
+.shot--row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
+
+/* スマホ枠 */
+.phone { width: 300px; margin: 0 auto; background: #16283a; border-radius: 30px;
+  padding: 9px; box-shadow: var(--shadow); }
+.phone__scr { background: #07172c; border-radius: 23px; overflow: hidden; position: relative;
+  color: #eaf4fb; font-size: 12px; line-height: 1.65; }
+.phone__notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 96px; height: 17px; background: #16283a; border-radius: 0 0 12px 12px; z-index: 5; }
+
+/* PC枠 */
+.win { max-width: 660px; margin: 0 auto; background: #16283a; border-radius: 12px;
+  padding: 0 0 8px; box-shadow: var(--shadow); }
+.win__bar { display: flex; align-items: center; gap: 6px; padding: 9px 12px; }
+.win__dot { width: 9px; height: 9px; border-radius: 50%; background: #43596e; }
+.win__url { flex: 1; margin-left: 8px; background: #0b1e30; color: #8fa9bd; font-size: 10.5px;
+  font-family: var(--mono); padding: 4px 10px; border-radius: 20px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis; }
+.win__scr { background: #07172c; margin: 0 8px; border-radius: 7px; overflow: hidden;
+  color: #eaf4fb; font-size: 11.5px; line-height: 1.6; }
+
+/* ---------- アプリ画面の再現パーツ ---------- */
+.a-hd { display: flex; align-items: center; gap: 8px; padding: 11px 12px;
+  background: linear-gradient(100deg, #0b2743, #14456f);
+  border-bottom: 1px solid rgba(255,255,255,.09); }
+.a-brand { font-family: var(--serif); font-size: 13px; letter-spacing: .18em; }
+.a-brand small { display: block; font-family: var(--num); font-size: 6.5px;
+  letter-spacing: .3em; opacity: .6; }
+.a-sp { flex: 1; }
+.a-chip { border: 1px solid rgba(255,255,255,.28); border-radius: 20px; padding: 2px 9px;
+  font-size: 9.5px; white-space: nowrap; }
+.a-body { padding: 12px; }
+.a-h1 { font-family: var(--serif); font-size: 15px; margin: 2px 0 8px; letter-spacing: .04em; }
+.a-lead { color: #9db6cc; font-size: 10.5px; margin: 0 0 10px; }
+.a-field { margin-bottom: 9px; }
+.a-label { font-size: 9.5px; color: #9db6cc; letter-spacing: .1em; display: block;
+  margin-bottom: 3px; }
+.a-input { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16);
+  border-radius: 8px; padding: 7px 9px; font-size: 11px; color: #cfe2f2; }
+.a-input--fill { color: #eaf4fb; }
+.a-btn { display: block; text-align: center; background: linear-gradient(100deg,#1d5b8c,#2e93cf);
+  color: #fff; border-radius: 9px; padding: 8px; font-size: 11.5px; font-weight: 700;
+  margin-top: 11px; }
+.a-btn--ghost { background: transparent; border: 1px solid rgba(255,255,255,.25); }
+.a-link { display: block; text-align: center; color: #8fd0f5; font-size: 10px;
+  margin-top: 10px; text-decoration: underline; }
+.a-note { color: #7f97ab; font-size: 9.5px; text-align: center; margin-top: 9px; line-height: 1.7; }
+.a-card { background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 9px; padding: 9px 10px; margin-bottom: 8px; }
+.a-card__t { font-family: var(--serif); font-size: 11.5px; margin-bottom: 3px; }
+.a-muted { color: #8ba4b9; font-size: 9.5px; }
+.a-vid { background: #000; border-radius: 7px; aspect-ratio: 16/9; display: flex;
+  align-items: center; justify-content: center; color: #55708a; font-size: 18px; }
+.a-marks { display: flex; flex-wrap: wrap; gap: 5px; }
+.a-mark { background: rgba(98,183,231,.16); border: 1px solid rgba(98,183,231,.4);
+  color: #a8dcf7; border-radius: 20px; padding: 2px 8px; font-size: 9.5px;
+  font-family: var(--num); }
+.a-side { background: rgba(255,255,255,.03); border-right: 1px solid rgba(255,255,255,.08);
+  padding: 9px; }
+.a-chap { border-radius: 7px; padding: 5px 8px; font-size: 10px; margin-bottom: 4px;
+  color: #fff; font-weight: 700; display: flex; justify-content: space-between; gap: 6px; }
+.cc0 { background: #1f5f8b; } .cc1 { background: #2b7a6b; } .cc2 { background: #6a4b8a; }
+.cc3 { background: #8a5a2b; } .cc4 { background: #2b5f8a; } .cc5 { background: #7a2b4b; }
+.a-lesson { font-size: 10px; padding: 4px 8px 4px 14px; color: #c6d8e7;
+  border-left: 1px solid rgba(255,255,255,.12); margin-left: 6px; }
+.a-lesson.on { color: #fff; background: rgba(98,183,231,.14); border-radius: 0 6px 6px 0; }
+.a-lim { display: inline-block; font-size: 8.5px; border-radius: 4px; padding: 0 5px;
+  margin-left: 4px; font-family: var(--num); }
+.a-lim--soon { background: #6b3a1e; color: #ffd7a8; }
+.a-lim--before { background: #23405c; color: #a8cbe6; }
+.a-menu { background: #0e2338; border: 1px solid rgba(255,255,255,.14); border-radius: 10px;
+  padding: 5px; margin-top: 6px; }
+.a-menu div { font-size: 10.5px; padding: 5px 8px; border-radius: 6px; }
+.a-menu div.sep { padding: 0; margin: 4px 6px; height: 1px; background: rgba(255,255,255,.1); }
+.a-menu div.adm { color: #ffd8a3; }
+.a-tabs { display: flex; gap: 5px; padding: 8px 10px 0; }
+.a-tab { font-size: 10px; padding: 4px 9px; border-radius: 7px 7px 0 0;
+  background: rgba(255,255,255,.06); color: #a8c2d6; }
+.a-tab.on { background: #123a5e; color: #fff; font-weight: 700; }
+.a-toolbar { display: flex; gap: 5px; align-items: center; padding: 8px 10px; flex-wrap: wrap; }
+.a-pill { font-size: 9px; border-radius: 20px; padding: 2px 8px;
+  background: rgba(255,255,255,.07); color: #b6cee0; border: 1px solid rgba(255,255,255,.12); }
+.a-pill.on { background: #2e93cf; color: #06182a; border-color: #2e93cf; font-weight: 700; }
+.a-pill .n { font-family: var(--num); opacity: .75; margin-left: 3px; }
+.a-tbl { width: 100%; border-collapse: collapse; font-size: 9.5px; min-width: 0; background: none; }
+.a-tbl th { background: rgba(98,183,231,.12); color: #bcdcf2; padding: 4px 6px;
+  border-bottom: 1px solid rgba(255,255,255,.12); white-space: nowrap; }
+.a-tbl td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.07); color: #d3e3f0; }
+.a-badge { border-radius: 4px; font-size: 8.5px; padding: 1px 5px; }
+.a-badge--ok { background: rgba(108,195,159,.2); color: #8fe0bd; }
+.a-tag { background: rgba(255,255,255,.09); border-radius: 4px; font-size: 8.5px;
+  padding: 1px 5px; margin-right: 3px; display: inline-block; }
+.a-modal { background: #0e2338; border: 1px solid rgba(255,255,255,.16); border-radius: 11px;
+  padding: 11px; margin: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.a-modal__t { font-family: var(--serif); font-size: 12px; margin-bottom: 8px;
+  padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,.12); }
+.a-row2 { display: flex; gap: 6px; }
+.a-row2 > * { flex: 1; }
+.a-block { border: 1px dashed rgba(255,255,255,.22); border-radius: 8px; padding: 6px 8px;
+  margin-bottom: 6px; font-size: 10px; }
+.a-block__h { font-size: 8.5px; color: #8fd0f5; letter-spacing: .1em; margin-bottom: 3px; }
+.a-add { display: flex; gap: 5px; margin-top: 6px; }
+.a-add span { font-size: 9.5px; border: 1px solid rgba(255,255,255,.25); border-radius: 20px;
+  padding: 2px 9px; color: #bcdcf2; }
+.a-drawer { position: absolute; left: 8px; bottom: 12px; background: #123a5e; color: #fff;
+  font-size: 10px; padding: 5px 12px; border-radius: 0 8px 8px 0; }
+.a-toast { background: #0e2338; border: 1px solid rgba(255,255,255,.16); border-radius: 10px;
+  padding: 12px; margin: 26px 12px; text-align: center; }
+.a-dots { display: flex; gap: 4px; justify-content: center; margin-top: 8px; }
+.a-dots i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.25); }
+.a-dots i.on { background: #62b7e7; }
+.a-sys { background: #dfe6ec; color: #1b2a38; font-size: 10px; border-radius: 9px;
+  padding: 8px 10px; margin: 8px; }
+.a-sys b { color: #1b2a38; }
+.a-sysbtn { background: #fff; border: 1px solid #b9c6d1; border-radius: 6px; padding: 3px 8px;
+  display: inline-block; margin-top: 5px; font-size: 9.5px; }
+
+/* ---------- 流れ図 ---------- */
+.flow { margin: 18px 0; }
+.flow__row { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start;
+  padding: 11px 0; border-top: 1px dashed var(--line); }
+.flow__row:first-child { border-top: 0; }
+.flow__who { font-size: 12px; text-align: center; border-radius: 8px; padding: 5px 4px;
+  background: var(--sky-soft); color: var(--navy-dk); font-weight: 700; }
+.flow__who--sys { background: var(--green-soft); color: var(--green); }
+.flow__who--gas { background: var(--amber-soft); color: var(--amber); }
+.flow__what { font-size: 14.5px; }
+.flow__arrow { text-align: center; color: var(--ink-faint); font-size: 13px; margin: -4px 0; }
+
+/* ---------- その他 ---------- */
+.kv { display: grid; grid-template-columns: 7.5em 1fr; gap: 4px 12px; font-size: 14.5px;
+  margin: 10px 0; }
+.kv dt { color: var(--ink-soft); }
+.kv dd { margin: 0; }
+.qa { border-top: 1px solid var(--line); padding: 13px 0; }
+.qa__q { font-weight: 700; color: var(--navy-dk); }
+.qa__q::before { content: "Q. "; font-family: var(--num); color: var(--sky); }
+.qa__a { font-size: 14.5px; margin-top: 3px; }
+.qa__a::before { content: "A. "; font-family: var(--num); color: var(--ink-faint); }
+.foot { text-align: center; color: var(--ink-faint); font-size: 12px; margin-top: 60px;
+  padding-top: 20px; border-top: 1px solid var(--line); font-family: var(--num);
+  letter-spacing: .1em; }
+.top { position: fixed; right: 14px; bottom: 14px; background: var(--navy); color: #fff;
+  border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center;
+  justify-content: center; text-decoration: none; box-shadow: var(--shadow); font-size: 15px; }
+
+@media print {
+  .top, .toc { display: none; }
+  body { background: #fff; }
+  .sec { break-inside: avoid; }
+}
+@media (max-width: 560px) {
+  body { font-size: 15px; }
+  .cover__title { font-size: 23px; }
+  .sec__title { font-size: 17.5px; }
+  .win { max-width: 100%; }
+  .kv { grid-template-columns: 1fr; gap: 0 0; }
+  .kv dt { margin-top: 8px; font-size: 12.5px; }
+  .flow__row { grid-template-columns: 74px 1fr; }
+}
+</style>
+</head>
+<body>
+<header class="cover">
+  <div class="cover__kicker">RIONJUKU ADMINISTRATION</div>
+  <h1 class="cover__title">運営の手順書</h1>
+  <p class="cover__sub">動画の追加、お知らせと通知、受講生の管理まで。運営ページだけで完結する手順をまとめています。</p>
+  <div class="cover__meta">2026.08 &nbsp;/&nbsp; ver.1.0 &nbsp;/&nbsp; 関係者用</div>
+</header>
+
+<nav class="toc"><div class="toc__box">
+  <p class="toc__t">もくじ</p>
+  <ul class="toc__list"><li><a href="#s1"><span class="toc__no">01</span><span>運営ページに入る</span></a></li><li><a href="#s2"><span class="toc__no">02</span><span>画面の見取り図</span></a></li><li><a href="#s3"><span class="toc__no">03</span><span>動画を追加する</span></a></li><li><a href="#s4"><span class="toc__no">04</span><span>お知らせを出す・通知を送る</span></a></li><li><a href="#s5"><span class="toc__no">05</span><span>受講生を管理する</span></a></li><li><a href="#s6"><span class="toc__no">06</span><span>コースとタグのしくみ</span></a></li><li><a href="#s7"><span class="toc__no">07</span><span>スプレッドシートを直接さわるとき</span></a></li><li><a href="#s8"><span class="toc__no">08</span><span>こまったときは</span></a></li></ul>
+</div></nav>
+
+<main class="wrap"><section class="sec" id="s1"><div class="sec__head"><span class="sec__no">01</span><h2 class="sec__title">運営ページに入る</h2></div><p class="sec__lead">運営ページは、受講生ページと<b>同じメールアドレス・同じパスワード</b>でお入りいただけます。タグに <code>admin</code> が入っている方だけが操作できます。</p><div class="card"><p class="card__t">運営ページのアドレス</p><p style="margin:0"><code>https://apps.l-mine.com/rionjuku-app/admin.html</code></p><p style="font-size:13.5px;color:var(--ink-soft);margin:6px 0 0">ブックマークしておくと便利です。受講生ページの右上メニューにある「⚙ 運営ページ」からも入れます。</p></div><div class="shot"><div class="win"><div class="win__bar"><span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span><span class="win__url">apps.l-mine.com/rionjuku-app/admin.html</span></div><div class="win__scr">
+<div class="a-body" style="padding:26px 16px 22px">
+  <div style="text-align:center;margin-bottom:14px">
+    <div style="font-family:var(--serif);font-size:18px;letter-spacing:.2em">凛穏塾 運営</div>
+    <div style="font-size:8.5px;color:#8fd0f5;letter-spacing:.28em;margin-top:3px">ADMINISTRATION</div>
+  </div>
+  <div class="a-field"><span class="a-label">メールアドレス</span><div class="a-input">&nbsp;</div></div>
+  <div class="a-field"><span class="a-label">パスワード</span><div class="a-input">&nbsp;</div></div>
+  <div class="a-btn">ログイン</div>
+  <p class="a-note">受講生ページと同じログインです。<br>
+    タグに <b style="color:#8fd0f5">admin</b> がある方のみ操作できます。</p>
+</div></div></div><p class="shot__cap">運営ページのログイン</p></div><div class="note note--warn"><b>このアドレスは受講生には配らないでください</b>ログインは掛かっていますが、混乱のもとになります。</div></section><section class="sec" id="s2"><div class="sec__head"><span class="sec__no">02</span><h2 class="sec__title">画面の見取り図</h2></div><p class="sec__lead">画面は4つのタブに分かれています。それぞれが、スプレッドシートの1枚のシートと繋がっています。</p><div class="shot"><div class="win"><div class="win__bar"><span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span><span class="win__url">apps.l-mine.com/rionjuku-app/admin.html</span></div><div class="win__scr"><div class="a-hd"><div class="a-brand">凛穏塾<small>ADMINISTRATION</small></div><div class="a-sp"></div><div class="a-chip">運営スタッフ さん（運営）</div><div class="a-chip">受講生ページ</div><div class="a-chip">再読込</div><div class="a-chip">ログアウト</div></div><div class="a-tabs"><div class="a-tab on">&#127916; 動画</div><div class="a-tab">&#128227; お知らせ</div><div class="a-tab">&#128101; 閲覧者</div><div class="a-tab">&#128218; コース設定</div></div>
+<div class="a-toolbar">
+  <span class="a-pill">すべてのコース ▾</span>
+  <span class="a-pill">タイトルで絞り込み</span>
+  <span class="a-pill on">＋ 動画を追加</span>
+  <span class="a-muted" style="font-size:8.5px">全152本中 152本を表示</span>
+</div>
+<div style="padding:0 10px 10px">
+<table class="a-tbl">
+<tr><th>行</th><th>コース</th><th>チャプター</th><th>タイトル</th><th>視聴期限</th><th>状態</th><th></th></tr>
+<tr><td>2</td><td>凛穏塾2.5期生</td><td>入学式</td><td>入学式</td><td>無期限</td>
+  <td><span class="a-badge a-badge--ok">公開中</span></td><td>編集 削除</td></tr>
+<tr><td>3</td><td>凛穏塾2.5期生</td><td>オンライン講義</td><td>第1回講義</td><td>無期限</td>
+  <td><span class="a-badge a-badge--ok">公開中</span></td><td>編集 削除</td></tr>
+<tr><td>4</td><td>凛穏塾2.5期生</td><td>オンライン講義</td><td>第2回講義</td><td>2026-09-30</td>
+  <td><span class="a-badge a-badge--ok">公開中</span></td><td>編集 削除</td></tr>
+</table></div></div></div><p class="shot__cap">運営ページ（動画タブ）</p></div><div class="tablewrap"><table><thead><tr><th>タブ</th><th>できること</th><th>つながっているシート</th></tr></thead><tbody><tr><td>🎬 動画</td><td>動画の追加・編集・削除、公開日と期限の設定</td><td>動画一覧</td></tr><tr><td>📣 お知らせ</td><td>お知らせの作成、宛先の指定、通知の送信、回答の集計</td><td>お知らせ／お知らせ回答</td></tr><tr><td>👥 閲覧者</td><td>受講生の追加・編集、タグ（＝観られるコース）の割り当て</td><td>閲覧者一覧</td></tr><tr><td>📚 コース設定</td><td>コースとタグの紐付け、並び順、公開・非公開</td><td>コース設定</td></tr></tbody></table></div><div class="note note--ok"><b>ここで直した内容は、そのままスプレッドシートに書き込まれます</b>逆に、スプレッドシートを直接直しても、アプリにすぐ反映されます。どちらから作業していただいても大丈夫です。</div></section><section class="sec" id="s3"><div class="sec__head"><span class="sec__no">03</span><h2 class="sec__title">動画を追加する</h2></div><p class="sec__lead">いちばんよく使う操作です。所要1分ほどです。</p><ol class="steps"><li><b>「🎬 動画」タブ →「＋ 動画を追加」を押します</b></li><li><b>コースを選びます</b>コースを選ぶと、<b>そのコースにある章だけ</b>がチャプターの候補に出ます。新しい章を作るときは「＋ 新しいチャプター」を選んでください。</li><li><b>レッスンタイトルと、VimeoのURLを入れます</b>URLは <code>https://vimeo.com/1234567890</code> の形でそのまま貼り付けてください。</li><li><b>必要なら、視聴開始日・視聴期限を入れます</b>空欄なら「いつでも観られる」です。</li><li><b>「補足＆タイム」に目次を入れます（任意）</b><code>0:12:30　本日のテーマ</code> のように書くと、受講生の画面で<b>タップでその場面に飛べる目次</b>になります。</li><li><b>保存を押します</b>スプレッドシートの、そのコースの最後の行の下に入ります。</li></ol><div class="shot shot--row"><div class="shot"><div class="win"><div class="win__bar"><span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span><span class="win__url">apps.l-mine.com/rionjuku-app/admin.html</span></div><div class="win__scr">
+<div class="a-modal">
+  <div class="a-modal__t">動画を追加</div>
+  <div class="a-row2">
+    <div class="a-field"><span class="a-label">コース</span>
+      <div class="a-input a-input--fill">凛穏塾2.5期生 ▾</div></div>
+    <div class="a-field"><span class="a-label">チャプター（章）</span>
+      <div class="a-input a-input--fill">オンライン講義 ▾</div></div>
+  </div>
+  <div class="a-field"><span class="a-label">レッスンタイトル</span>
+    <div class="a-input a-input--fill">第6回講義</div></div>
+  <div class="a-field"><span class="a-label">動画URL（Vimeo）</span>
+    <div class="a-input a-input--fill">https://vimeo.com/1234567890</div></div>
+  <div class="a-row2">
+    <div class="a-field"><span class="a-label">視聴開始（任意）</span>
+      <div class="a-input">年 / 月 / 日</div></div>
+    <div class="a-field"><span class="a-label">視聴期限（任意）</span>
+      <div class="a-input">年 / 月 / 日</div></div>
+  </div>
+  <div class="a-field"><span class="a-label">補足＆タイム</span>
+    <div class="a-input a-input--fill" style="line-height:1.7">0:00:01　ごあいさつ<br>0:12:30　本日のテーマ</div></div>
+  <div class="a-btn">保存する</div>
+</div></div></div><p class="shot__cap">動画を追加する画面</p></div></div><h3>動画の下に資料や音声を置く</h3><p>編集画面の下のほうに、<b>ブロック</b>という欄があります。「＋ 文章」「＋ 画像」「＋ 音声」を押すと、上から順に積んでいけます。順番の入れ替えもできます。</p><div class="shot"><div class="win"><div class="win__bar"><span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span><span class="win__url">apps.l-mine.com/rionjuku-app/admin.html</span></div><div class="win__scr">
+<div class="a-modal">
+  <div class="a-modal__t">動画の下に置く資料（ブロック）</div>
+  <div class="a-block"><div class="a-block__h">文章</div>
+    今回のレジュメです。印刷してお使いください。</div>
+  <div class="a-block"><div class="a-block__h">画像</div>
+    <span class="a-muted">https://drive.google.com/file/d/･･･</span></div>
+  <div class="a-block"><div class="a-block__h">音声</div>
+    <span class="a-muted">https://drive.google.com/file/d/･･･</span></div>
+  <div class="a-add"><span>＋ 文章</span><span>＋ 画像</span><span>＋ 音声</span></div>
+</div></div></div><p class="shot__cap">ブロックで資料を積む</p></div><div class="note note--amber"><b>画像と音声はGoogleドライブのリンクでOKです</b>ドライブで「リンクを知っている全員」に共有してから、そのURLを貼ってください。表示用の形へ自動で変換されます。</div><h3>あとから直す・消す</h3><p>一覧の右にある<b>「編集」</b>で同じ画面が開きます。<b>「削除」</b>はスプレッドシートの行ごと消えますので、ご注意ください。一時的に隠したいだけのときは、編集画面の<b>「公開状態」を非公開</b>にしてください。</p></section><section class="sec" id="s4"><div class="sec__head"><span class="sec__no">04</span><h2 class="sec__title">お知らせを出す・通知を送る</h2></div><p class="sec__lead">お知らせは、宛先を選んで出せます。通知（プッシュ）は、お知らせを保存したあとに送ります。</p><ol class="steps"><li><b>「📣 お知らせ」タブ →「＋ お知らせを作成」</b></li><li><b>見出しと本文を書きます</b>改行はそのまま反映されます。</li><li><b>宛先をボタンで選びます</b>「👥 全員」か、期・コースのタグを選んでください（複数選べます）。「🔒 運営だけ」は下書き代わりに使えます。</li><li><b>ご出欠などを聞きたいときは、アンケートを入れます</b>1行に1つ書くと、その数だけボタンが並びます。</li><li><b>保存します</b>これで受講生の画面に出ます。</li><li><b>通知を送るなら、一覧の「🔔 通知」を押します</b>まず<b>「🧪 自分にテスト」</b>で自分の端末に届くか確かめてから、<b>「📢 全員に送信」</b>を押してください。</li></ol><div class="shot shot--row"><div class="shot"><div class="win"><div class="win__bar"><span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span><span class="win__url">apps.l-mine.com/rionjuku-app/admin.html</span></div><div class="win__scr">
+<div class="a-modal">
+  <div class="a-modal__t">お知らせを作成</div>
+  <div class="a-field"><span class="a-label">見出し</span>
+    <div class="a-input a-input--fill">9月のゆるカフェ質問会のご案内</div></div>
+  <div class="a-field"><span class="a-label">本文</span>
+    <div class="a-input a-input--fill" style="line-height:1.7">9月14日(日) 10:00〜、<br>オンラインで開催します。</div></div>
+  <div class="a-field"><span class="a-label">誰に見せるか（宛先）</span>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
+      <span class="a-pill">&#128101; 全員</span><span class="a-pill">&#128274; 運営だけ</span>
+      <span class="a-pill on">2.5期生<span class="n">52</span></span>
+      <span class="a-pill">2期生<span class="n">37</span></span>
+      <span class="a-pill">サロン<span class="n">89</span></span></div></div>
+  <div class="a-field"><span class="a-label">アンケート（1行に1つ）</span>
+    <div class="a-input a-input--fill" style="line-height:1.7">参加します<br>欠席します</div></div>
+  <div class="a-btn">保存する</div>
+</div></div></div><p class="shot__cap">お知らせを作成</p></div><div class="shot"><div class="win"><div class="win__bar"><span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span><span class="win__url">apps.l-mine.com/rionjuku-app/admin.html</span></div><div class="win__scr">
+<div class="a-modal">
+  <div class="a-modal__t">通知を送る：9月のゆるカフェ質問会のご案内</div>
+  <p class="a-muted" style="margin:0 0 8px">宛先は、お知らせの宛先と同じです。
+    通知をオンにしている方の端末にだけ届きます。</p>
+  <div class="a-field"><span class="a-label">通知の文面（本文の先頭が入ります）</span>
+    <div class="a-input a-input--fill">9月14日(日) 10:00〜、オンラインで開催します。</div></div>
+  <div class="a-row2" style="margin-top:8px">
+    <div class="a-btn a-btn--ghost" style="margin:0">&#129514; 自分にテスト</div>
+    <div class="a-btn" style="margin:0">&#128226; 全員に送信</div>
+  </div>
+</div></div></div><p class="shot__cap">通知を送る</p></div></div><div class="note note--warn"><b>「自分にテスト」で『端末がありません』と出るとき</b>今ログインしている<b>ご自身のアカウント</b>で、まだ通知をオンにしていないためです。受講生ページの右上メニュー →「🔔 通知の設定」からオンにしてください。（別のアカウントで運営ページに入っていると、この行き違いが起きます）</div><h3>アンケートの回答を見る</h3><p>お知らせ一覧の<b>「📊 回答」</b>から、選択肢ごとの人数と、どなたが何を選んだかの一覧を見られます。スプレッドシートの「お知らせ回答」シートにも同じものが残ります。</p></section><section class="sec" id="s5"><div class="sec__head"><span class="sec__no">05</span><h2 class="sec__title">受講生を管理する</h2></div><p class="sec__lead">受講生の追加、コースの割り当て、パスワードの再設定はここです。</p><div class="shot"><div class="win"><div class="win__bar"><span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span><span class="win__url">apps.l-mine.com/rionjuku-app/admin.html</span></div><div class="win__scr"><div class="a-hd"><div class="a-brand">凛穏塾<small>ADMINISTRATION</small></div><div class="a-sp"></div><div class="a-chip">運営スタッフ さん（運営）</div><div class="a-chip">受講生ページ</div><div class="a-chip">再読込</div><div class="a-chip">ログアウト</div></div><div class="a-tabs"><div class="a-tab">&#127916; 動画</div><div class="a-tab">&#128227; お知らせ</div><div class="a-tab on">&#128101; 閲覧者</div><div class="a-tab">&#128218; コース設定</div></div>
+<div class="a-toolbar">
+  <span class="a-pill">名前・メールで絞り込み</span>
+  <span class="a-pill on">＋ 閲覧者を追加</span>
+  <span class="a-muted" style="font-size:8.5px">全150名中 150名を表示（&#128276; 通知オン 34名）</span>
+</div>
+<div class="a-toolbar" style="padding-top:0">
+  <span class="a-pill on">すべて<span class="n">150</span></span>
+  <span class="a-pill">2.5期生<span class="n">52</span></span>
+  <span class="a-pill">2期生<span class="n">37</span></span>
+  <span class="a-pill">サロン<span class="n">89</span></span>
+  <span class="a-pill">admin<span class="n">5</span></span>
+  <span class="a-pill">&#128276; 通知オン<span class="n">34</span></span>
+  <span class="a-pill">&#128241; LINE連携<span class="n">61</span></span>
+  <span class="a-pill">&#9940; 停止<span class="n">0</span></span>
+</div>
+<div style="padding:0 10px 10px">
+<table class="a-tbl">
+<tr><th>行</th><th>名前</th><th>メールアドレス</th><th>タグ</th><th>状態</th><th>通知</th><th></th></tr>
+<tr><td>2</td><td>山田 花子</td><td>hanako@example.com</td>
+  <td><span class="a-tag">2.5期生</span><span class="a-tag">凛コース</span></td>
+  <td><span class="a-badge a-badge--ok">有効</span></td><td>&#128276; 1台</td><td>編集 削除</td></tr>
+<tr><td>3</td><td>鈴木 太郎</td><td>taro@example.com</td>
+  <td><span class="a-tag">サロン</span></td>
+  <td><span class="a-badge a-badge--ok">有効</span></td><td>—</td><td>編集 削除</td></tr>
+</table></div></div></div><p class="shot__cap">閲覧者タブ</p></div><h3>絞り込み</h3><p>上の入力欄で<b>名前・メール</b>から探せます。その下のボタンで<b>タグ・通知オン・LINE連携・停止</b>で絞り込めます。ボタンの数字は、その条件に当てはまる人数です。</p><h3>新しい受講生を追加する</h3><ol class="steps"><li><b>「＋ 閲覧者を追加」を押します</b></li><li><b>お名前とメールアドレスを入れます</b>メールアドレスがログインIDになります。</li><li><b>タグを入れます</b>カンマ区切りです。例：<code>2.5期生,凛コース</code><br>ここに入れたタグと一致するコースだけが、その方の画面に出ます。</li><li><b>パスワードは空のままで大丈夫です</b>ご本人に「はじめての方はこちら」から決めていただく形になります。</li></ol><h3>パスワードを忘れたと連絡が来たら</h3><div class="tablewrap"><table><thead><tr><th>やり方</th><th>手順</th><th>向いている場面</th></tr></thead><tbody><tr><td>こちらで決める</td><td>編集画面の「パスワード」に新しいものを入れて保存し、ご本人へお伝えする</td><td>すぐ入れるようにしてさしあげたいとき</td></tr><tr><td>ご本人に決め直してもらう</td><td>スプレッドシート「閲覧者一覧」のI列（初回設定）を空にする。その方は再び「はじめての方はこちら」を使えるようになります</td><td>パスワードを人に伝えたくないとき（おすすめ）</td></tr></tbody></table></div><div class="note"><b>受講を止められた方</b>「状態」を<b>停止</b>にすると、ログインできなくなります。行を消さずに残しておけるので、再開のときもそのまま戻せます。</div></section><section class="sec" id="s6"><div class="sec__head"><span class="sec__no">06</span><h2 class="sec__title">コースとタグのしくみ</h2></div><p class="sec__lead">「どのタグの人が、どのコースを観られるか」を決めているのがコース設定です。</p><div class="shot"><div class="win"><div class="win__bar"><span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span><span class="win__url">apps.l-mine.com/rionjuku-app/admin.html</span></div><div class="win__scr"><div class="a-hd"><div class="a-brand">凛穏塾<small>ADMINISTRATION</small></div><div class="a-sp"></div><div class="a-chip">運営スタッフ さん（運営）</div><div class="a-chip">受講生ページ</div><div class="a-chip">再読込</div><div class="a-chip">ログアウト</div></div><div class="a-tabs"><div class="a-tab">&#127916; 動画</div><div class="a-tab">&#128227; お知らせ</div><div class="a-tab">&#128101; 閲覧者</div><div class="a-tab on">&#128218; コース設定</div></div>
+<div class="a-toolbar"><span class="a-muted" style="font-size:8.5px">
+  「タグ」が閲覧者のタグと一致した人だけ、そのコースを視聴できます。並び順は小さい数が上。</span></div>
+<div style="padding:0 10px 10px">
+<table class="a-tbl">
+<tr><th>コース名</th><th>タグ</th><th>並び順</th><th>公開</th><th>説明</th></tr>
+<tr><td>凛穏塾2.5期生</td><td><span class="a-tag">2.5期生</span></td><td>10</td>
+  <td><span class="a-badge a-badge--ok">公開</span></td><td>2.5期生の講義アーカイブです。</td></tr>
+<tr><td>卒業生サロン</td><td><span class="a-tag">サロン</span></td><td>30</td>
+  <td><span class="a-badge a-badge--ok">公開</span></td><td></td></tr>
+</table></div></div></div><p class="shot__cap">コース設定タブ</p></div><div class="flow"><div class="flow__row"><div class="flow__who">受講生</div><div class="flow__what">閲覧者一覧のタグ　例：<b>2.5期生</b></div></div><p class="flow__arrow">&#9660;</p><div class="flow__row"><div class="flow__who flow__who--gas">コース設定</div><div class="flow__what">コース「凛穏塾2.5期生」のタグ　＝ <b>2.5期生</b></div></div><p class="flow__arrow">&#9660;</p><div class="flow__row"><div class="flow__who flow__who--sys">動画</div><div class="flow__what">動画一覧でコース名が「凛穏塾2.5期生」の動画が、すべて観られる</div></div></div><div class="note note--amber"><b>動画一覧のF列（タグ）は、ふだん空欄で大丈夫です</b>空欄なら「コース設定のタグ」がそのまま使われます。1本だけ特別に見せたい／見せたくないときにだけ、その動画に直接タグを書いてください。</div><h3>新しい期がはじまったときの3手</h3><ol class="steps"><li><b>コース設定に1行足します</b>コース名・タグ・並び順・公開。</li><li><b>動画一覧に動画を足します</b>（運営ページの「＋ 動画を追加」でOK）</li><li><b>受講生のタグに、新しい期のタグを足します</b></li></ol><div class="note note--ok"><b>プログラムの作り直し（再デプロイ）は要りません</b>動画・お知らせ・受講生・コースは、すべて画面かシートから足せます。</div></section><section class="sec" id="s7"><div class="sec__head"><span class="sec__no">07</span><h2 class="sec__title">スプレッドシートを直接さわるとき</h2></div><p class="sec__lead">運営ページを使わず、スプレッドシートを直接直しても構いません。そのときのお約束です。</p><div class="tablewrap"><table><thead><tr><th>シート</th><th>気をつけること</th></tr></thead><tbody><tr><td>動画一覧</td><td><b>同じコースの行は、続けて並べてください。</b>コース名（A列）と章名（B列）は、空欄にすると<b>上の行と同じ</b>とみなされます</td></tr><tr><td>閲覧者一覧</td><td>メールアドレスは<b>小文字・スペースなし</b>で。タグはカンマ区切り</td></tr><tr><td>コース設定</td><td>並び順（C列）は小さい数が上。空欄ならシートの行順になります</td></tr><tr><td>プッシュ</td><td><b>さわらないでください。</b>通知の宛先が自動で記録されています</td></tr><tr><td>ログイン履歴</td><td>記録用です。増えすぎたら古い行を消しても大丈夫です</td></tr></tbody></table></div><div class="note note--warn"><b>列の順番は変えないでください</b>プログラムが「何列目に何がある」で読んでいます。列の追加・入れ替え・削除をされると、動かなくなります。（右端に新しい列を足すのは大丈夫です）</div><div class="note note--warn"><b>共有は「制限付き」のままにしてください</b>このシートにはパスワードが入っています。「リンクを知っている全員」に変えると、外から読めてしまいます。</div></section><section class="sec" id="s8"><div class="sec__head"><span class="sec__no">08</span><h2 class="sec__title">こまったときは</h2></div><div class="qa"><p class="qa__q">受講生から「ログインできない」と言われました</p><p class="qa__a">①メールアドレスの打ち間違い（全角・スペース）、②まだ閲覧者一覧に登録がない、③状態が「停止」になっている、の順でご確認ください。閲覧者タブの絞り込みでお名前を検索すると早いです。</p></div><div class="qa"><p class="qa__q">「観られるはずの動画が出ない」と言われました</p><p class="qa__a">その方のタグと、コース設定のタグが一致しているかをご確認ください。一致していれば、その動画の視聴開始日が未来になっていないか、非公開になっていないかもご確認ください。</p></div><div class="qa"><p class="qa__q">画面がずっと「読み込んでいます」のまま</p><p class="qa__a">通信が不安定なときに起こります。「再読込」ボタンを押してみてください。何度も続く場合は、開発担当（あかり）までご連絡ください。</p></div><div class="qa"><p class="qa__q">「サーバー側でエラーが発生しました」と出ました</p><p class="qa__a">スプレッドシートの列がずれている可能性があります。直前に列を足したり消したりされていないかご確認のうえ、ご連絡ください。</p></div><div class="qa"><p class="qa__q">動画を間違えて削除してしまいました</p><p class="qa__a">スプレッドシートで <b>Ctrl+Z</b>（元に戻す）が効きます。時間が経っていたら、シートの「ファイル → 変更履歴」から戻せます。</p></div><div class="qa"><p class="qa__q">受講生に配るURLはどれですか</p><p class="qa__a">LINEからご案内するときは末尾に <code>?uid=[[uid]]</code> を付けたもの、メールなど他の方法のときは付けないもの、と使い分けてください。詳しくはURLリストをご覧ください。</p></div></section>
+  <p class="foot">凛穏塾 動画視聴アプリ &nbsp;/&nbsp; 2026.08 &nbsp;/&nbsp; ver.1.0 &nbsp;/&nbsp; 関係者用</p>
+</main>
+<a class="top" href="#" aria-label="ページの先頭へ">&#9650;</a>
+</body>
+</html>
