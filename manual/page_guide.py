@@ -58,14 +58,14 @@ SCR_WATCH = HD + """
 <div style="display:grid;grid-template-columns:104px 1fr">
   <div class="a-side">
     <div class="a-chap cc0"><span>入学式</span><span>3</span></div>
-    <div class="a-chap cc1"><span>オンライン講義</span><span>12</span></div>
+    <div class="a-chap cc1"><span>講義動画</span><span>12</span></div>
     <div class="a-lesson on">第1回講義</div>
     <div class="a-lesson">第2回講義<span class="a-lim a-lim--soon">あと5日</span></div>
     <div class="a-lesson">第3回講義<span class="a-lim a-lim--before">9/1〜</span></div>
     <div class="a-chap cc2"><span>ゆるカフェ</span><span>8</span></div>
   </div>
   <div class="a-body" style="padding:9px">
-    <div class="a-muted" style="font-size:8.5px">凛穏塾2.5期生 &nbsp;/&nbsp; オンライン講義</div>
+    <div class="a-muted" style="font-size:8.5px">凛穏塾2.5期生 &nbsp;/&nbsp; 講義動画</div>
     <div class="a-h1" style="font-size:12.5px;margin:3px 0 6px">第1回講義</div>
     <div class="a-vid">&#9654;</div>
     <div style="margin-top:7px"><span class="a-pill">□ 視聴済みにする</span></div>

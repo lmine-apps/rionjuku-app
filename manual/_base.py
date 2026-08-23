@@ -105,7 +105,7 @@ code { font-family: var(--mono); font-size: .88em; background: var(--sky-soft);
 .card__t { font-family: var(--serif); font-size: 15.5px; margin: 0 0 8px; color: var(--navy-dk); }
 .note { border-radius: 11px; padding: 12px 16px; margin: 14px 0; font-size: 14.5px;
   border-left: 4px solid var(--sky); background: var(--sky-soft); }
-.note b { display: block; margin-bottom: 2px; }
+.note > b:first-child { display: block; margin-bottom: 2px; }
 .note--warn  { border-left-color: var(--warn);  background: var(--warn-soft); }
 .note--ok    { border-left-color: var(--green); background: var(--green-soft); }
 .note--amber { border-left-color: var(--amber); background: var(--amber-soft); }
@@ -194,7 +194,7 @@ td code { background: transparent; padding: 0; }
   font-family: var(--num); }
 .a-side { background: rgba(255,255,255,.03); border-right: 1px solid rgba(255,255,255,.08);
   padding: 9px; }
-.a-chap { border-radius: 7px; padding: 5px 8px; font-size: 10px; margin-bottom: 4px;
+.a-chap { border-radius: 7px; padding: 5px 8px; font-size: 9.5px; white-space: nowrap; margin-bottom: 4px;
   color: #fff; font-weight: 700; display: flex; justify-content: space-between; gap: 6px; }
 .cc0 { background: #1f5f8b; } .cc1 { background: #2b7a6b; } .cc2 { background: #6a4b8a; }
 .cc3 { background: #8a5a2b; } .cc4 { background: #2b5f8a; } .cc5 { background: #7a2b4b; }
