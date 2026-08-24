@@ -255,11 +255,11 @@ td code { background: transparent; padding: 0; }
 /* ---------- 足元のロゴ ---------- */
 /* 白地のロゴを、白い光の中に multiply で重ねる。
    明るい紙面でも濃紺のダークモードでも、四角い画像に見えない。 */
-.mark { position: relative; width: 150px; height: 150px; margin: 46px auto 0;
+.mark { position: relative; width: 186px; height: 186px; margin: 44px auto 0;
   display: flex; align-items: center; justify-content: center; }
 .mark::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,.96) 0%, rgba(255,255,255,.9) 36%,
-    rgba(235,247,255,.5) 60%, rgba(255,255,255,0) 84%); }
+  background: radial-gradient(circle, rgba(255,255,255,.97) 0%, rgba(255,255,255,.92) 30%,
+    rgba(240,250,255,.55) 48%, rgba(235,247,255,.22) 66%, rgba(255,255,255,0) 84%); }
 .mark img { position: relative; width: 112px; height: 112px; mix-blend-mode: multiply; }
 
 /* ---------- 流れ図 ---------- */
