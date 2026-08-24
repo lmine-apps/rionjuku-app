@@ -5,6 +5,7 @@
   python build.py
 
 出力先はこのフォルダの1つ上（＝リポジトリ直下）。
+  start.html          はじめての方へ（初回登録のご案内）
   guide.html          受講生さま向け 使い方ガイド
   manual-admin.html   運営の手順書
   manual-system.html  画面と仕組み
@@ -18,6 +19,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _base import CSS, _mark   # noqa: E402
+import page_start              # noqa: E402
 import page_guide              # noqa: E402
 import page_admin              # noqa: E402
 import page_system             # noqa: E402
@@ -25,6 +27,8 @@ import page_system             # noqa: E402
 OUT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 HUB_CARDS = [
+    ("start.html", "&#128140;", "はじめての方へ（初回登録のご案内）",
+     "LINE・メールのご案内メッセージに貼る1枚。ここから登録の3ステップだけを短く説明します。", "配布用"),
     ("guide.html", "&#128218;", "受講生さま向け 使い方ガイド",
      "はじめてのログインから、動画の観かた・通知の受け取りかたまで。"
      "そのまま受講生さまにお渡しいただけます。", "配布用"),
@@ -86,6 +90,7 @@ def hub():
 
 def main():
     files = [
+        ("start.html", page_start.build()),
         ("guide.html", page_guide.build()),
         ("manual-admin.html", page_admin.build()),
         ("manual-system.html", page_system.build()),
