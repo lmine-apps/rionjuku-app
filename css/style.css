@@ -771,3 +771,44 @@ audio.block-prev { width: 100%; }
   .reveal { opacity: 1; transform: none; filter: none; }
   .gate { display: none !important; }
 }
+
+/* ===== 起動画面 =====
+   ロゴは白地のPNG。白い光（radial-gradient）の上に mix-blend-mode:multiply で
+   重ねているので、白地が光に溶けて「四角い画像」に見えない。 */
+.splash {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 46%, #12345a 0%, #07172c 62%);
+  opacity: 1; transition: opacity .6s ease;
+}
+.splash.is-out { opacity: 0; pointer-events: none; }
+.splash__glow {
+  position: absolute; width: min(78vw, 380px); aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255,255,255,.97) 0%, rgba(255,255,255,.93) 34%,
+    rgba(233,246,255,.55) 58%, rgba(200,230,250,.16) 76%, rgba(255,255,255,0) 88%);
+  filter: blur(.5px);
+  animation: splashGlow 1.5s cubic-bezier(.2,.7,.3,1) both;
+}
+.splash__logo {
+  position: relative; width: min(64vw, 310px); height: auto;
+  mix-blend-mode: multiply;
+  animation: splashLogo 1.5s cubic-bezier(.2,.7,.3,1) both;
+}
+@keyframes splashGlow {
+  0%   { opacity: 0; transform: scale(.42); }
+  38%  { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes splashLogo {
+  0%   { opacity: 0; transform: scale(.9); filter: blur(6px); }
+  45%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+/* ロゴの足元にそっと置くとき（ガイド等） */
+.logo-foot { display: block; width: 92px; margin: 26px auto 0; opacity: .9; }
+
+@media (prefers-reduced-motion: reduce) {
+  .splash__glow, .splash__logo { animation: none; opacity: 1; transform: none; filter: none; }
+}

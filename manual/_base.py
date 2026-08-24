@@ -252,6 +252,16 @@ td code { background: transparent; padding: 0; }
 .a-sysbtn { background: #fff; border: 1px solid #b9c6d1; border-radius: 6px; padding: 3px 8px;
   display: inline-block; margin-top: 5px; font-size: 9.5px; }
 
+/* ---------- 足元のロゴ ---------- */
+/* 白地のロゴを、白い光の中に multiply で重ねる。
+   明るい紙面でも濃紺のダークモードでも、四角い画像に見えない。 */
+.mark { position: relative; width: 150px; height: 150px; margin: 46px auto 0;
+  display: flex; align-items: center; justify-content: center; }
+.mark::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.96) 0%, rgba(255,255,255,.9) 36%,
+    rgba(235,247,255,.5) 60%, rgba(255,255,255,0) 84%); }
+.mark img { position: relative; width: 112px; height: 112px; mix-blend-mode: multiply; }
+
 /* ---------- 流れ図 ---------- */
 .flow { margin: 18px 0; }
 .flow__row { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start;
@@ -298,6 +308,20 @@ td code { background: transparent; padding: 0; }
 """
 
 
+def logo_b64():
+    """ロゴ画像の中身（base64）。1枚完結にするため直接埋め込む"""
+    import base64, os
+    f = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                     "..", "assets", "logo-mark.png")
+    return base64.b64encode(open(os.path.normpath(f), "rb").read()).decode("ascii")
+
+
+def _mark():
+    """足元に置くロゴ"""
+    return ('<div class="mark"><img src="data:image/png;base64,%s" alt="凛穏塾"></div>'
+            % logo_b64())
+
+
 def page(fname, title, kicker, cover_title, cover_sub, secs, meta=""):
     """1枚完結の HTML を組み立てて返す"""
     toc = "".join(
@@ -332,12 +356,13 @@ def page(fname, title, kicker, cover_title, cover_sub, secs, meta=""):
 </div></nav>
 
 <main class="wrap">%s
-  <p class="foot">凛穏塾 動画視聴アプリ &nbsp;/&nbsp; %s</p>
+  %s
+  <p class="foot" style="margin-top:14px;border-top:0">凛穏塾 動画視聴アプリ &nbsp;/&nbsp; %s</p>
 </main>
 <a class="top" href="#" aria-label="ページの先頭へ">&#9650;</a>
 </body>
 </html>
-""" % (title, CSS, kicker, cover_title, cover_sub, meta, toc, body, meta)
+""" % (title, CSS, kicker, cover_title, cover_sub, meta, toc, body, _mark(), meta)
 
 
 # ---- 小さなヘルパー -------------------------------------------------------

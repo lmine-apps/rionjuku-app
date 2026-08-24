@@ -17,7 +17,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from _base import CSS          # noqa: E402
+from _base import CSS, _mark   # noqa: E402
 import page_guide              # noqa: E402
 import page_admin              # noqa: E402
 import page_system             # noqa: E402
@@ -76,11 +76,12 @@ def hub():
   %s
   <div class="note" style="margin-top:26px"><b>受講生さまにお渡しできるのは「使い方ガイド」だけです</b>
     ほかの2つは運営の内部情報を含みますので、関係者のみでご利用ください。</div>
-  <p class="foot">凛穏塾 動画視聴アプリ &nbsp;/&nbsp; 2026.08</p>
+  %s
+  <p class="foot" style="margin-top:14px;border-top:0">凛穏塾 動画視聴アプリ &nbsp;/&nbsp; 2026.08</p>
 </main>
 </body>
 </html>
-""" % (CSS, extra, cards)
+""" % (CSS, extra, cards, _mark())
 
 
 def main():

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """受講生さま向け：使い方ガイド（ユーザー目線）"""
 
-from _base import page, phone, win, row, note, card, steps, table, qa
+from _base import page, phone, win, row, note, card, steps, table, qa, logo_b64
 
 APP = "apps.l-mine.com/rionjuku-app/"
 
@@ -144,12 +144,12 @@ SCR_HOME = """
       →「ホーム画面に追加」→「追加」</div>
   </div>
   <div class="a-card" style="text-align:center">
-    <div style="width:46px;height:46px;border-radius:11px;margin:0 auto 5px;
-      background:linear-gradient(150deg,#0b2743,#2e93cf);display:flex;align-items:center;
-      justify-content:center;font-family:var(--serif);font-size:16px">凛</div>
+    <img src="data:image/png;base64,__LOGO__" alt="凛穏塾"
+      style="width:48px;height:48px;border-radius:11px;background:#fff;padding:2px;
+      margin:0 auto 5px;display:block">
     <div class="a-muted">ホーム画面にこのマークが並びます</div>
   </div>
-</div>"""
+</div>""".replace("__LOGO__", logo_b64())
 
 
 # ---------- 本文 ----------
