@@ -783,7 +783,7 @@ audio.block-prev { width: 100%; }
 }
 .splash.is-out { opacity: 0; pointer-events: none; }
 .splash__glow {
-  position: absolute; width: min(78vw, 380px); aspect-ratio: 1;
+  position: absolute; width: min(86vw, 430px); aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle,
     rgba(255,255,255,.97) 0%, rgba(255,255,255,.93) 34%,
@@ -792,7 +792,7 @@ audio.block-prev { width: 100%; }
   animation: splashGlow 1.5s cubic-bezier(.2,.7,.3,1) both;
 }
 .splash__logo {
-  position: relative; width: min(64vw, 310px); height: auto;
+  position: relative; width: min(21vw, 84px); height: auto;
   mix-blend-mode: multiply;
   animation: splashLogo 1.5s cubic-bezier(.2,.7,.3,1) both;
 }
