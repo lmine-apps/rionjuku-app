@@ -786,9 +786,9 @@ audio.block-prev { width: 100%; }
   position: absolute; width: min(86vw, 430px); aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle,
-    rgba(255,255,255,.97) 0%, rgba(255,255,255,.93) 34%,
-    rgba(233,246,255,.55) 58%, rgba(200,230,250,.16) 76%, rgba(255,255,255,0) 88%);
-  filter: blur(.5px);
+    rgba(255,255,255,.98) 0%, rgba(255,255,255,.95) 12%, rgba(255,255,255,.70) 26%,
+    rgba(232,245,255,.38) 44%, rgba(205,233,252,.16) 62%, rgba(255,255,255,0) 80%);
+  filter: blur(1px);
   animation: splashGlow 1.5s cubic-bezier(.2,.7,.3,1) both;
 }
 .splash__logo {
