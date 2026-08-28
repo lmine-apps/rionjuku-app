@@ -307,18 +307,38 @@
     }
   ];
 
-  function showGuide(page) {
+  /**
+   * 使い方ガイド
+   * @param {number} page  何ページ目から出すか
+   * @param {boolean} auto ログイン直後に自動で出したときは true
+   *   auto のときだけ「もう表示しない」を出し、閉じた時点で二度と自動表示しない。
+   *   （メニューの「📖 使い方ガイド」からはいつでも見られる）
+   */
+  function showGuide(page, auto) {
     var i = page || 0;
+    var last = (i === GUIDE.length - 1);
     var g = GUIDE[i];
     var m = RJ.modal(g.t,
       '<div class="guide-body">' + g.b + '</div>'
       + '<div class="guide-dots">' + GUIDE.map(function (_, k) {
         return '<span class="' + (k === i ? 'on' : '') + '"></span>';
       }).join('') + '</div>',
-      (i < GUIDE.length - 1)
-        ? function (close) { close(); showGuide(i + 1); }
-        : function (close) { close(); markGuideSeen(); },
-      { saveText: (i < GUIDE.length - 1) ? '次へ' : 'はじめる', cancelText: (i === 0 ? 'あとで' : '閉じる') });
+      last
+        ? function (close) { close(); markGuideSeen(); }
+        : function (close) { close(); showGuide(i + 1, auto); },
+      {
+        saveText: last ? 'はじめる' : '次へ',
+        cancelText: (auto && !last) ? 'もう表示しない' : '閉じる'
+      });
+
+    // 自動表示のときは、途中で閉じてもそこで打ち切る（次回から出さない）
+    if (auto) {
+      var cancelBtn = m.host.querySelector('[data-cancel]');
+      if (cancelBtn) cancelBtn.addEventListener('click', markGuideSeen);
+      m.host.querySelector('.modal-bg').addEventListener('click', function (ev) {
+        if (ev.target === ev.currentTarget) markGuideSeen();
+      });
+    }
 
     // ホーム画面追加のiPhone/Android切替
     var tabs = m.host.querySelectorAll('.gt');
@@ -330,7 +350,7 @@
         m.host.querySelector('#guideOsAnd').classList.toggle('hidden', b.dataset.os !== 'and');
       });
     });
-    if (i === GUIDE.length - 1) markGuideSeen();
+    if (last) markGuideSeen();
   }
   function markGuideSeen() { try { localStorage.setItem('rj_guide', '1'); } catch (e) {} }
   function guideSeen() { try { return localStorage.getItem('rj_guide') === '1'; } catch (e) { return true; } }
@@ -420,7 +440,7 @@
       showPicker();                  // 複数ならコース選択
     }
     // 初回は使い方ガイド、2回目以降は未読のお知らせポップ
-    if (!guideSeen()) setTimeout(function () { showGuide(0); }, 1900);
+    if (!guideSeen()) setTimeout(function () { showGuide(0, true); }, 1900);
     else popupNews();
   }
 
