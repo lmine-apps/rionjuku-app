@@ -314,6 +314,9 @@
    *   auto のときだけ「もう表示しない」を出し、閉じた時点で二度と自動表示しない。
    *   （メニューの「📖 使い方ガイド」からはいつでも見られる）
    */
+  // マニュアル用の画面キャプチャ中か（デモモード＋?shot= のときだけ true）
+  var SHOOTING = RJ.MOCK && /[?&]shot=/.test(location.search);
+
   function showGuide(page, auto) {
     var i = page || 0;
     var last = (i === GUIDE.length - 1);
@@ -440,6 +443,7 @@
       showPicker();                  // 複数ならコース選択
     }
     // 初回は使い方ガイド、2回目以降は未読のお知らせポップ
+    if (SHOOTING) return;              // マニュアル用の撮影中は何も出さない
     if (!guideSeen()) setTimeout(function () { showGuide(0, true); }, 1900);
     else popupNews();
   }
@@ -926,4 +930,48 @@
       start();
     }
   }
+
+  // ---------- マニュアル用の画面キャプチャ（デモモードのときだけ動く） ----------
+  // 例）index.html?mock=1&shot=first
+  //   login / first / firstpass / picker / menu の5種類。
+  //   本番（?mock=1が無いとき）は、この中に一切入らない。
+  (function () {
+    if (!RJ.MOCK) return;
+    var m = location.search.match(/[?&]shot=([a-z]+)/);
+    if (!m) return;
+    var what = m[1];
+    document.documentElement.classList.add('shooting');   // デモの帯などを隠す
+    function wait(fn, ms) { setTimeout(fn, ms || 500); }
+    function save() { return document.querySelector('.modal [data-save]'); }
+
+    if (what === 'first' || what === 'firstpass') {
+      wait(function () {
+        $('firstLink').click();
+        if (what === 'first') {
+          wait(function () { $('fsEmail').value = 'hanako@example.com'; }, 200);
+          return;
+        }
+        wait(function () {
+          $('fsEmail').value = 'hanako@example.com';
+          save().click();
+          wait(function () {
+            if ($('fsPass')) { $('fsPass').value = 'sakura2026'; $('fsPass2').value = 'sakura2026'; }
+          }, 500);
+        }, 200);
+      });
+      return;
+    }
+
+    if (what === 'picker' || what === 'menu') {
+      wait(function () {
+        api('login', { email: 'demo@example.com', password: 'demo' }).then(function (res) {
+          if (!res || !res.ok) return;
+          store.save(res.token, res.user);
+          markGuideSeen();                 // 撮影中はガイドを出さない
+          start();
+          if (what === 'menu') wait(function () { $('acctBtn').click(); }, 900);
+        });
+      });
+    }
+  })();
 })();

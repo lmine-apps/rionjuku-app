@@ -5,9 +5,11 @@
 LINE／メールのご案内メッセージに貼る、いちばん短い1枚。
 ・URLに ?uid=… が付いていたら、そのまま「動画ページをひらく」ボタンへ引き継ぐ
   （プロラインの [[uid]] で来た方は、アプリ側で名簿にUIDが記録される）
+・画面の写真は assets/shots/*.jpg（アプリを実際に開いて撮ったもの）。
+  撮り直しは manual/shoot.py を実行する。
 """
 
-from _base import CSS, phone, note, logo_b64, _mark
+from _base import CSS, shot_phone, note, logo_b64, _mark
 
 APP = "apps.l-mine.com/rionjuku-app/"
 
@@ -41,45 +43,6 @@ EXTRA = """
 .os p { margin: 0; font-size: 14px; }
 @media (max-width: 560px) { .hero__box { padding: 18px 15px 20px; } .go { font-size: 16px; } }
 """
-
-SCR_LOGIN = """
-<div class="a-body" style="padding:24px 16px 18px">
-  <div style="text-align:center;margin-bottom:12px">
-    <div style="font-family:var(--serif);font-size:19px;letter-spacing:.2em">凛穏塾</div>
-    <div style="font-size:9px;color:#8fd0f5;letter-spacing:.25em;margin-top:3px">受講生専用 動画ページ</div>
-  </div>
-  <div class="a-field"><span class="a-label">メールアドレス</span><div class="a-input">&nbsp;</div></div>
-  <div class="a-field"><span class="a-label">パスワード</span><div class="a-input">&nbsp;</div></div>
-  <div class="a-btn">ログイン</div>
-  <div class="a-link" style="color:#ffd8a3">はじめての方はこちら（パスワードを設定する）</div>
-  <p class="a-note">↑ 最初はこちらを押してください</p>
-</div>"""
-
-SCR_MAIL = """
-<div class="a-body" style="padding:26px 16px 20px">
-  <div style="text-align:center;margin-bottom:12px">
-    <div style="font-family:var(--serif);font-size:15px">はじめての方</div>
-    <div style="font-size:9.5px;color:#9db6cc;margin-top:4px">ご登録のメールアドレスを<br>ご入力ください</div>
-  </div>
-  <div class="a-field"><span class="a-label">メールアドレス</span>
-    <div class="a-input a-input--fill">hanako@example.com</div></div>
-  <div class="a-btn">つぎへ</div>
-  <p class="a-note">凛穏塾にお伝えいただいている<br>アドレスをご入力ください</p>
-</div>"""
-
-SCR_PASS = """
-<div class="a-body" style="padding:24px 16px 20px">
-  <div class="a-card" style="margin-top:6px">
-    <div class="a-card__t">山田 花子 さま</div>
-    <div class="a-muted">ご本人さまの確認ができました。<br>お好きなパスワードをお決めください。</div>
-  </div>
-  <div class="a-field"><span class="a-label">新しいパスワード（4文字以上）</span>
-    <div class="a-input a-input--fill">••••••••</div></div>
-  <div class="a-field"><span class="a-label">確認のためもう一度</span>
-    <div class="a-input a-input--fill">••••••••</div></div>
-  <div class="a-btn">設定してはじめる</div>
-</div>"""
-
 
 BODY = """
 <div class="hero"><div class="hero__box">
@@ -172,9 +135,9 @@ JS = """(function () {
 def build():
     body = BODY % (
         APP,
-        phone(SCR_LOGIN, "① ログイン画面"),
-        phone(SCR_MAIL, "② メールアドレスの確認"),
-        phone(SCR_PASS, "③ パスワードを決める"),
+        shot_phone("assets/shots/login.jpg", "① ログイン画面"),
+        shot_phone("assets/shots/first.jpg", "② メールアドレスの確認"),
+        shot_phone("assets/shots/firstpass.jpg", "③ パスワードを決める"),
         note("<b>「ご登録がありません」と出たとき</b>"
              "別のメールアドレスでご登録されている可能性があります。"
              "お手数ですが、運営スタッフまでご連絡ください。", "warn"),

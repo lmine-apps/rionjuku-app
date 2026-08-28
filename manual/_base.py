@@ -142,6 +142,8 @@ td code { background: transparent; padding: 0; }
   padding: 9px; box-shadow: var(--shadow); }
 .phone__scr { background: #07172c; border-radius: 23px; overflow: hidden; position: relative;
   color: #eaf4fb; font-size: 12px; line-height: 1.65; }
+.phone--img { padding: 7px; }
+.phone__img { display: block; width: 100%; height: auto; border-radius: 17px; }
 .phone__notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%);
   width: 96px; height: 17px; background: #16283a; border-radius: 0 0 12px 12px; z-index: 5; }
 
@@ -366,6 +368,14 @@ def page(fname, title, kicker, cover_title, cover_sub, secs, meta=""):
 
 
 # ---- 小さなヘルパー -------------------------------------------------------
+
+def shot_phone(src, cap="", w=""):
+    """実際の画面キャプチャをスマホ枠に入れる（ノッチは付けない）"""
+    c = '<p class="shot__cap">%s</p>' % cap if cap else ""
+    return ('<div class="shot"><div class="phone phone--img"><div class="phone__scr">'
+            '<img class="phone__img" src="%s" alt="" loading="lazy"></div></div>%s</div>'
+            ) % (src, c)
+
 
 def phone(inner, cap=""):
     c = '<p class="shot__cap">%s</p>' % cap if cap else ""

@@ -33,7 +33,8 @@
   ];
   var STUDENTS = [
     { row: 2, name: 'デモ 受講生', email: 'demo@example.com',  pass: 'demo', tags: '凛穏塾2.5期生,卒業生サロン', status: '有効', memo: 'デモ用', joined: '2026-08-17', uid: '' },
-    { row: 3, name: 'デモ 運営',   email: 'admin@example.com', pass: 'demo', tags: 'admin',                     status: '有効', memo: 'デモ用', joined: '2026-08-17', uid: 'U0123456789abcdef' }
+    { row: 3, name: 'デモ 運営',   email: 'admin@example.com', pass: 'demo', tags: 'admin',                     status: '有効', memo: 'デモ用', joined: '2026-08-17', uid: 'U0123456789abcdef' },
+    { row: 4, name: '山田 花子',  email: 'hanako@example.com', pass: '',     tags: '凛穏塾2.5期生',            status: '有効', memo: 'デモ用（初回設定がまだの人）', joined: '2026-08-24', uid: '' }
   ];
   var NEWS = [
     {

@@ -812,3 +812,15 @@ audio.block-prev { width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .splash__glow, .splash__logo { animation: none; opacity: 1; transform: none; filter: none; }
 }
+
+/* マニュアル用に画面を撮るとき（?mock=1&shot=… ）だけ、デモの表示を隠す */
+html.shooting .demo-bar { display: none !important; }
+html.shooting body.has-demo-bar { padding-top: 0 !important; }
+html.shooting body.has-demo-bar .hd { top: 0 !important; }   /* 帯を隠したぶんヘッダーも上へ */
+html.shooting #loginMsg.ok { display: none !important; }
+html.shooting .splash { display: none !important; }
+html.shooting .gate { display: none !important; }
+html.shooting *, html.shooting *::before, html.shooting *::after {
+  animation: none !important; transition: none !important;
+}
+html.shooting .reveal { opacity: 1 !important; transform: none !important; filter: none !important; }
