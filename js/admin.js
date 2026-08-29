@@ -173,7 +173,10 @@
           + '<td class="narrow">' + v.row + '</td>'
           + '<td>' + esc(v.course) + '</td>'
           + '<td>' + esc(v.chapter) + '</td>'
-          + '<td>' + esc(v.title || '（無題）') + (v.note ? '<div class="hint">補足あり</div>' : '') + '</td>'
+          + '<td>' + (v.mark ? '<span class="mk">' + esc(v.mark) + '</span> ' : '')
+          + esc(v.title || '（無題）')
+          + (v.hint ? '<div class="hint" style="color:#b3402f">' + esc(v.hint) + '</div>' : '')
+          + (v.note ? '<div class="hint">補足あり</div>' : '') + '</td>'
           + '<td>' + (vm ? '<a href="' + esc(v.url) + '" target="_blank" rel="noopener">Vimeo ' + esc(vm.id) + '</a>'
                         : (v.url ? '<span class="hint">Vimeo以外：' + esc(v.url) + '</span>' : '<span class="hint">なし</span>')) + '</td>'
           + '<td class="narrow">' + (v.start ? esc(v.start) : '<span class="hint">—</span>') + '</td>'
@@ -224,6 +227,14 @@
       + '<input id="mEnd" type="text" value="' + esc(v ? v.end : '') + '" placeholder="2026-12-31">'
       + '<div class="hint">空欄＝無期限。その日の23:59まで</div></div>'
       + '</div>'
+      + '<div class="row2">'
+      + '<div class="field"><label>目印（任意）</label>'
+      + '<input id="mMark" type="text" value="' + esc(v ? (v.mark || '') : '') + '" placeholder="更新!!　NEW　など">'
+      + '<div class="hint">書いた文字がそのまま赤いバッジで出ます。消したいときは空にしてください。</div></div>'
+      + '<div class="field"><label>ひとこと（任意）</label>'
+      + '<input id="mHint" type="text" value="' + esc(v ? (v.hint || '') : '') + '" placeholder="視聴は9月30日まで！">'
+      + '<div class="hint">動画タイトルのすぐ下に、赤い帯で1行出ます。</div></div>'
+      + '</div>'
       + '<div class="field"><label>補足＆タイム</label>'
       + '<textarea id="mNote" rows="6" placeholder="0:00:01　オープニング&#10;0:12:30　本編">' + esc(v ? v.note : '') + '</textarea>'
       + '<div class="hint">「0:12:30　見出し」の形で書いた行は、視聴ページで目次ボタンになります。</div></div>'
@@ -259,7 +270,9 @@
           hidden: $('mHidden').value,
           start: $('mStart').value.trim(),
           end: $('mEnd').value.trim(),
-          blocks: (m && m.getBlocks) ? m.getBlocks() : ''
+          blocks: (m && m.getBlocks) ? m.getBlocks() : '',
+          mark: $('mMark').value.trim(),
+          hint: $('mHint').value.trim()
         };
         if (!isNew) { p.row = v.row; p.expectTitle = v.title; }
         return api(isNew ? 'video_add' : 'video_update', p).then(function (res) {

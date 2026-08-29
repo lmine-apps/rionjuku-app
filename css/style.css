@@ -824,3 +824,31 @@ html.shooting *, html.shooting *::before, html.shooting *::after {
   animation: none !important; transition: none !important;
 }
 html.shooting .reveal { opacity: 1 !important; transform: none !important; filter: none !important; }
+
+/* ===== 目印（スプシ K列）とひとこと（L列） ===== */
+/* K列に書いた文字がそのままバッジになる。文字数は自由（長いと折り返す） */
+.mk {
+  display: inline-block; vertical-align: 2px; margin-left: 6px;
+  background: linear-gradient(135deg, #b3402f, #d4644f);
+  color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
+  border-radius: 5px; padding: 1px 7px; line-height: 1.7;
+  box-shadow: 0 2px 6px rgba(179, 64, 47, .32);
+  animation: mkPulse 2.6s ease-in-out infinite;
+}
+.pick-name .mk { font-size: 11px; }
+h1 .mk { font-size: 12.5px; vertical-align: 5px; }
+@keyframes mkPulse {
+  0%, 72%, 100% { transform: none; box-shadow: 0 2px 6px rgba(179, 64, 47, .32); }
+  80%           { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(179, 64, 47, .5); }
+}
+/* L列「ひとこと」＝タイトルのすぐ下に出る一行 */
+.hint-bar {
+  background: #fdf0ed; border-left: 4px solid #b3402f; color: #8f3325;
+  border-radius: 9px; padding: 9px 14px; margin: 0 0 12px; font-size: 13.5px;
+  font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) { .mk { animation: none; } }
+@media (max-width: 560px) {
+  .mk { font-size: 10px; padding: 1px 6px; }
+  .hint-bar { font-size: 13px; padding: 8px 12px; }
+}

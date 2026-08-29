@@ -470,7 +470,7 @@
       var done = 0;
       c.chapters.forEach(function (ch) { ch.videos.forEach(function (v) { if (isWatched(v)) done++; }); });
       return '<button class="pick" data-i="' + i + '" type="button">'
-        + '<span class="pick-name">' + esc(c.name) + '</span>'
+        + '<span class="pick-name">' + esc(c.name) + (c.mark ? '<span class="mk">' + esc(c.mark) + '</span>' : '') + '</span>'
         + (c.desc ? '<span class="pick-desc">' + esc(c.desc) + '</span>' : '')
         + '<span class="pick-meta">全' + n + '本' + (done ? '　視聴済み ' + done + '本' : '') + '</span>'
         + '</button>';
@@ -552,7 +552,7 @@
           return '<button class="side-lesson' + (idx === state.vi ? ' on' : '') + (locked ? ' locked' : '') + '"'
             + ' data-i="' + idx + '" type="button"' + (locked || !v.url ? ' disabled' : '') + '>'
             + (isWatched(v) ? '<span class="chk">✓</span>' : (locked ? '<span class="chk">🔒</span>' : '<span class="chk"></span>'))
-            + '<span class="ln">' + esc(v.title || '（無題）') + lessonLimitBadge(v) + '</span></button>';
+            + '<span class="ln">' + esc(v.title || '（無題）') + markBadge(v) + lessonLimitBadge(v) + '</span></button>';
         }).join('')
         + '</div></div>';
     }).join('');
@@ -609,6 +609,11 @@
     return l ? '<span class="lim ' + l.cls + '">' + esc(l.text) + '</span>' : '';
   }
   /** レッスン1本ぶんの期限バッジ */
+  /** スプシ K列「目印」に書いた文字を、そのままバッジにする（例：更新!!） */
+  function markBadge(v) {
+    return v && v.mark ? '<span class="mk">' + esc(v.mark) + '</span>' : '';
+  }
+
   function lessonLimitBadge(v) {
     if (v.state === 'before') return '<em class="lim wait">' + esc(RJ.jpDate(v.startAt)) + ' 公開</em>';
     if (v.state === 'expired') return '<em class="lim gone">視聴期間 終了</em>';
@@ -634,7 +639,10 @@
     var vm = RJ.parseVimeo(v.url);
 
     show('scWatch');
-    $('vTitle').textContent = v.title || '（無題）';
+    $('vTitle').innerHTML = esc(v.title || '（無題）') + markBadge(v);
+    var hint = $('vHint');
+    if (v.hint) { hint.textContent = v.hint; hint.classList.remove('hidden'); }
+    else { hint.classList.add('hidden'); }
     $('vCrumb').textContent = state.courses[state.ci].name + '　＞　' + item.chapter;
 
     var limit = $('vLimit');
@@ -962,7 +970,7 @@
       return;
     }
 
-    if (what === 'picker' || what === 'menu') {
+    if (what === 'picker' || what === 'menu' || what === 'watch') {
       wait(function () {
         api('login', { email: 'demo@example.com', password: 'demo' }).then(function (res) {
           if (!res || !res.ok) return;
@@ -970,6 +978,10 @@
           markGuideSeen();                 // 撮影中はガイドを出さない
           start();
           if (what === 'menu') wait(function () { $('acctBtn').click(); }, 900);
+          if (what === 'watch') wait(function () {
+            openCourse(0);
+            wait(function () { openVideo(2); }, 400);
+          }, 700);
         });
       });
     }

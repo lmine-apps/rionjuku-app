@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.5.0
+ * VERSION: v1.6.0
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -37,7 +37,9 @@ const V_START  = 7; // G 視聴開始（空欄＝すぐ観られる）
 const V_END    = 8; // H 視聴終了（空欄＝無期限。その日の23:59まで）
 const V_HIDE   = 9; // I 非公開（"非公開" と書くと受講生には出ない）
 const V_BLOCK  = 10; // J 追加コンテンツ（[文章]/[画像]/[音声] を並べたもの）
-const V_COLS   = 10;
+const V_MARK   = 11; // K 目印（書いた文字がそのままバッジになる。例：更新!!／NEW）
+const V_HINT   = 12; // L ひとこと（タイトルの下に1行出る。例：視聴は9月30日まで！）
+const V_COLS   = 12;
 
 // 受講生シートの列
 const S_NAME = 1, S_MAIL = 2, S_PASS = 3, S_TAGS = 4, S_STATUS = 5, S_MEMO = 6, S_JOINED = 7,
@@ -322,6 +324,8 @@ function videos_() {
       note: note,
       tag: s_(r[V_TAG - 1]),
       blocks: String(r[V_BLOCK - 1] == null ? '' : r[V_BLOCK - 1]),
+      mark: s_(r[V_MARK - 1]),
+      hint: s_(r[V_HINT - 1]),
       hidden: isOff_(r[V_HIDE - 1]) || /^(非公開|hidden)$/i.test(s_(r[V_HIDE - 1])),
       start: s_(r[V_START - 1]) ? fmtCell_(r[V_START - 1]) : '',
       end: s_(r[V_END - 1]) ? fmtCell_(r[V_END - 1]) : '',
@@ -551,9 +555,11 @@ function apiData_(p) {
     if (!u.admin && !anyTag_(u.tags, needs)) continue;
 
     if (!buckets[v.course]) {
-      buckets[v.course] = { name: v.course, desc: conf.desc, order: conf.order, chapters: {}, chapOrder: [] };
+      buckets[v.course] = { name: v.course, desc: conf.desc, order: conf.order,
+                            mark: '', chapters: {}, chapOrder: [] };
     }
     const b = buckets[v.course];
+    if (v.mark && !b.mark) b.mark = v.mark;   // コース一覧にも「更新!!」を出すため
     if (!b.chapters[v.chapter]) { b.chapters[v.chapter] = []; b.chapOrder.push(v.chapter); }
     b.chapters[v.chapter].push({
       id: v.row,
@@ -562,6 +568,8 @@ function apiData_(p) {
       url: (v.state === 'open') ? v.url : '',
       note: v.note,
       blocks: v.blocks,
+      mark: v.mark,
+      hint: v.hint,
       state: v.state,
       startAt: v.startAt,
       endAt: v.endAt,
@@ -574,7 +582,7 @@ function apiData_(p) {
     .sort(function (a, b) { return a.order - b.order; })
     .map(function (b) {
       return {
-        name: b.name, desc: b.desc,
+        name: b.name, desc: b.desc, mark: b.mark,
         chapters: b.chapOrder.map(function (cn) { return { name: cn, videos: b.chapters[cn] }; })
       };
     });
@@ -766,7 +774,7 @@ function apiVideoAdd_(p) {
     sh.getRange(row, 1, 1, V_COLS).setValues([[
       course, chapter, s_(p.title), s_(p.url), String(p.note == null ? '' : p.note),
       s_(p.tag), s_(p.start), s_(p.end), s_(p.hidden) ? '非公開' : '',
-      String(p.blocks == null ? '' : p.blocks)
+      String(p.blocks == null ? '' : p.blocks), s_(p.mark), s_(p.hint)
     ]]);
     return { ok: true, row: row };
   } finally { lock.releaseLock(); }
@@ -794,6 +802,8 @@ function apiVideoUpdate_(p) {
     if (p.start   != null) sh.getRange(row, V_START).setValue(s_(p.start));
     if (p.end     != null) sh.getRange(row, V_END).setValue(s_(p.end));
     if (p.blocks  != null) sh.getRange(row, V_BLOCK).setValue(String(p.blocks));
+    if (p.mark    != null) sh.getRange(row, V_MARK).setValue(s_(p.mark));
+    if (p.hint    != null) sh.getRange(row, V_HINT).setValue(s_(p.hint));
     return { ok: true };
   } finally { lock.releaseLock(); }
 }
@@ -1180,6 +1190,8 @@ function apiSetup_(p) {
   const heads = {};
   heads[V_TAG] = 'タグ'; heads[V_START] = '視聴開始'; heads[V_END] = '視聴終了'; heads[V_HIDE] = '非公開';
   heads[V_BLOCK] = '追加コンテンツ';
+  heads[V_MARK]  = '目印';
+  heads[V_HINT]  = 'ひとこと';
   Object.keys(heads).forEach(function (col) {
     if (!s_(sh.getRange(1, Number(col)).getValue())) sh.getRange(1, Number(col)).setValue(heads[col]);
   });
