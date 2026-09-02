@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.6.0
+ * VERSION: v1.7.0
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -32,13 +32,13 @@ const V_CHAP   = 2; // B チャプター名
 const V_TITLE  = 3; // C レッスンタイトル
 const V_URL    = 4; // D 動画ＵＲＬ
 const V_NOTE   = 5; // E 補足＆タイム
-const V_TAG    = 6; // F タグ（空欄ならコース設定のタグを継承）
-const V_START  = 7; // G 視聴開始（空欄＝すぐ観られる）
-const V_END    = 8; // H 視聴終了（空欄＝無期限。その日の23:59まで）
-const V_HIDE   = 9; // I 非公開（"非公開" と書くと受講生には出ない）
-const V_BLOCK  = 10; // J 追加コンテンツ（[文章]/[画像]/[音声] を並べたもの）
-const V_MARK   = 11; // K 目印（書いた文字がそのままバッジになる。例：更新!!／NEW）
-const V_HINT   = 12; // L ひとこと（タイトルの下に1行出る。例：視聴は9月30日まで！）
+const V_MARK   = 6;  // F 目印（書いた文字がそのままバッジになる。例：更新!!／NEW）
+const V_HINT   = 7;  // G ひとこと（タイトルの下に1行出る。例：視聴は9月30日まで！）
+const V_TAG    = 8;  // H タグ（空欄ならコース設定のタグを継承）
+const V_START  = 9;  // I 視聴開始（空欄＝すぐ観られる）
+const V_END    = 10; // J 視聴終了（空欄＝無期限。その日の23:59まで）
+const V_HIDE   = 11; // K 非公開（"非公開" と書くと受講生には出ない）
+const V_BLOCK  = 12; // L 追加コンテンツ（[文章]/[画像]/[音声] を並べたもの）
 const V_COLS   = 12;
 
 // 受講生シートの列
@@ -773,8 +773,8 @@ function apiVideoAdd_(p) {
     const row = after + 1;
     sh.getRange(row, 1, 1, V_COLS).setValues([[
       course, chapter, s_(p.title), s_(p.url), String(p.note == null ? '' : p.note),
-      s_(p.tag), s_(p.start), s_(p.end), s_(p.hidden) ? '非公開' : '',
-      String(p.blocks == null ? '' : p.blocks), s_(p.mark), s_(p.hint)
+      s_(p.mark), s_(p.hint), s_(p.tag), s_(p.start), s_(p.end),
+      s_(p.hidden) ? '非公開' : '', String(p.blocks == null ? '' : p.blocks)
     ]]);
     return { ok: true, row: row };
   } finally { lock.releaseLock(); }
@@ -1161,6 +1161,57 @@ function checkPush() {
   return out;
 }
 
+
+// ===== 列の引っ越し（1回だけ実行する） =====
+/**
+ * 動画一覧の列を、新しい並びへ移す。
+ *
+ *   前： A コース／B 章／C レッスン／D URL／E 補足／F タグ／G 視聴開始／H 視聴終了／I 非公開／J 追加／K 目印／L ひとこと
+ *   後： A コース／B 章／C レッスン／D URL／E 補足／**F 目印／G ひとこと**／H タグ／I 視聴開始／J 視聴終了／K 非公開／L 追加
+ *
+ * ・F の前に2列を差し込み、右に寄った旧「目印／ひとこと」の中身を新しい場所へ移してから消す
+ * ・すでに新しい並びなら何もしない（何度実行しても壊れない）
+ * ・実行ログに結果が出る
+ */
+function fixColumns() {
+  const sh = videoSheet_();
+  const lastCol = sh.getLastColumn();
+  const lastRow = sh.getLastRow();
+  const head = sh.getRange(1, 1, 1, Math.max(lastCol, 1)).getValues()[0].map(s_);
+
+  if (head[5] === '目印' && head[6] === 'ひとこと') {
+    Logger.log('すでに新しい並びです。何もしませんでした。');
+    return 'すでに新しい並びです';
+  }
+  if (head[5] && head[5] !== 'タグ') {
+    Logger.log('F列の見出しが「タグ」ではありません（' + head[5] + '）。念のため中止しました。');
+    return '中止：F列が想定と違います';
+  }
+
+  const rows = Math.max(lastRow - 1, 0);
+  // 旧K列＝目印／旧L列＝ひとこと に何か入っていれば退避する
+  let old = null;
+  if (lastCol >= 11 && rows > 0) {
+    old = sh.getRange(2, 11, rows, Math.min(2, lastCol - 10)).getValues();
+  }
+
+  sh.insertColumnsBefore(6, 2);           // F・G を新しく空ける（既存はH以降へずれる）
+
+  if (old) {
+    const mark = old.map(function (r) { return [r[0] == null ? '' : r[0]]; });
+    const hint = old.map(function (r) { return [r.length > 1 && r[1] != null ? r[1] : '']; });
+    sh.getRange(2, 6, rows, 1).setValues(mark);
+    sh.getRange(2, 7, rows, 1).setValues(hint);
+    sh.deleteColumns(13, Math.min(2, sh.getLastColumn() - 12));   // 右に寄った旧K・L を削除
+  }
+
+  sh.getRange(1, 6).setValue('目印');
+  sh.getRange(1, 7).setValue('ひとこと');
+  sh.getRange(1, 1, 1, V_COLS).setFontWeight('bold');
+  Logger.log('列を移しました。F=目印／G=ひとこと／H=タグ／I=視聴開始／J=視聴終了／K=非公開／L=追加コンテンツ');
+  return 'OK';
+}
+
 // ===== 名簿の補正 =====
 // ※ レクティのプラン区分（凛コース／穏コース／VIP／Standard）をタグへ反映する
 //    一度きりの関数 fixRoster は 2026-08-18 に実行済みのため削除しました。
@@ -1189,9 +1240,9 @@ function apiSetup_(p) {
 
   const heads = {};
   heads[V_TAG] = 'タグ'; heads[V_START] = '視聴開始'; heads[V_END] = '視聴終了'; heads[V_HIDE] = '非公開';
-  heads[V_BLOCK] = '追加コンテンツ';
   heads[V_MARK]  = '目印';
   heads[V_HINT]  = 'ひとこと';
+  heads[V_BLOCK] = '追加コンテンツ';
   Object.keys(heads).forEach(function (col) {
     if (!s_(sh.getRange(1, Number(col)).getValue())) sh.getRange(1, Number(col)).setValue(heads[col]);
   });
