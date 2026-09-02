@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.7.0
+ * VERSION: v1.7.2
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -14,6 +14,8 @@
  */
 
 // ===== 設定 =====
+// ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
+const VERSION = 'v1.7.2';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -54,7 +56,7 @@ const N_COLS = 10;
 // ===== ルーター =====
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: 'v1.5.0' });
+  if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: VERSION });
   return out_({ ok: false, error: 'post_only' });
 }
 
@@ -62,7 +64,7 @@ function doPost(e) {
   const p = (e && e.parameter) || {};
   try {
     switch (p.action) {
-      case 'ping':          return out_({ ok: true, msg: 'pong', version: 'v1.5.0' });
+      case 'ping':          return out_({ ok: true, msg: 'pong', version: VERSION });
       case 'login':         return out_(apiLogin_(p));
       case 'uid_login':     return out_(apiUidLogin_(p));
       case 'first_check':   return out_(apiFirstCheck_(p));
@@ -1269,7 +1271,7 @@ function apiSetup_(p) {
   });
 
   vids.forEach(function (v) {
-    if (v.tag) warn.push('動画一覧 ' + v.row + '行目 F列に「' + v.tag + '」＝この動画専用のタグとして扱われます。不要なら削除してください。');
+    if (v.tag) warn.push('動画一覧 ' + v.row + '行目 H列（タグ）に「' + v.tag + '」＝この動画専用のタグとして扱われます。不要なら削除してください。');
   });
 
   // 管理者アカウント
