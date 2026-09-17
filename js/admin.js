@@ -615,7 +615,7 @@
   }
 
   // ---------- 閲覧者 ----------
-  var sFilter = { tags: [], push: false, line: false, stopped: false };
+  var sFilter = { tags: [], push: false, line: false, stopped: false, nowatch: false, done80: false };
   $('sWord').addEventListener('input', renderStudents);
 
   /** 絞り込みボタン（タグ・通知・LINE・停止） */
@@ -626,7 +626,7 @@
     if (D.students.some(function (s) { return hasTag(s, 'admin'); })) tags = tags.concat(['admin']);
 
     $('sFilters').innerHTML =
-      '<button class="tagpick all' + (!sFilter.tags.length && !sFilter.push && !sFilter.line && !sFilter.stopped ? ' on' : '')
+      '<button class="tagpick all' + (!sFilter.tags.length && !sFilter.push && !sFilter.line && !sFilter.stopped && !sFilter.nowatch && !sFilter.done80 ? ' on' : '')
         + '" data-f="clear" type="button">すべて<span>' + D.students.length + '</span></button>'
       + tags.map(function (t) {
           return '<button class="tagpick' + (sFilter.tags.indexOf(t) >= 0 ? ' on' : '') + '" data-tag="' + esc(t) + '" type="button">'
@@ -638,12 +638,16 @@
       + '<button class="tagpick staff' + (sFilter.line ? ' on' : '') + '" data-f="line" type="button">📱 LINE連携<span>'
         + count(function (s) { return !!s.uid; }) + '</span></button>'
       + '<button class="tagpick staff' + (sFilter.stopped ? ' on' : '') + '" data-f="stopped" type="button">⛔ 停止<span>'
-        + count(function (s) { return /停止|無効|退会/.test(s.status); }) + '</span></button>';
+        + count(function (s) { return /停止|無効|退会/.test(s.status); }) + '</span></button>'
+      + '<button class="tagpick staff' + (sFilter.nowatch ? ' on' : '') + '" data-f="nowatch" type="button">👀 まだ観ていない<span>'
+        + count(function (s) { return Number(s.watchTotal || 0) > 0 && Number(s.watched || 0) === 0; }) + '</span></button>'
+      + '<button class="tagpick staff' + (sFilter.done80 ? ' on' : '') + '" data-f="done80" type="button">🏅 8割以上<span>'
+        + count(function (s) { return Number(s.watchRate || 0) >= 80; }) + '</span></button>';
 
     Array.prototype.forEach.call($('sFilters').querySelectorAll('.tagpick'), function (b) {
       b.addEventListener('click', function () {
         var f = b.dataset.f;
-        if (f === 'clear') { sFilter = { tags: [], push: false, line: false, stopped: false }; }
+        if (f === 'clear') { sFilter = { tags: [], push: false, line: false, stopped: false, nowatch: false, done80: false }; }
         else if (f) { sFilter[f] = !sFilter[f]; }
         else {
           var t = b.dataset.tag, i = sFilter.tags.indexOf(t);
@@ -656,6 +660,18 @@
   }
   $('addStudentBtn').addEventListener('click', function () { studentModal(null); });
 
+  /** 視聴率のセル（何本中何本・バー付き） */
+  function watchCell(s) {
+    var total = Number(s.watchTotal || 0);
+    if (!total) return '<span class="hint">—</span>';
+    var done = Number(s.watched || 0);
+    var rate = Number(s.watchRate || 0);
+    var cls = rate >= 80 ? ' hi' : (rate === 0 ? ' zero' : '');
+    return '<span class="wrate' + cls + '">' + rate + '%</span>'
+      + '<div class="wbar"><i style="width:' + rate + '%"></i></div>'
+      + '<div class="hint">' + done + ' / ' + total + '本</div>';
+  }
+
   function renderStudents() {
     var w = $('sWord').value.trim().toLowerCase();
     var rows = D.students.filter(function (s) {
@@ -667,6 +683,8 @@
       if (sFilter.push && !D.push[s.email.toLowerCase()]) return false;
       if (sFilter.line && !s.uid) return false;
       if (sFilter.stopped && !/停止|無効|退会/.test(s.status)) return false;
+      if (sFilter.nowatch && !(Number(s.watchTotal || 0) > 0 && Number(s.watched || 0) === 0)) return false;
+      if (sFilter.done80 && Number(s.watchRate || 0) < 80) return false;
       return true;
     });
     var pushOn = Object.keys(D.push || {}).length;
@@ -675,13 +693,15 @@
     if (sFilter.push) cond.push('通知オン');
     if (sFilter.line) cond.push('LINE連携');
     if (sFilter.stopped) cond.push('停止');
+    if (sFilter.nowatch) cond.push('まだ観ていない');
+    if (sFilter.done80) cond.push('8割以上');
     $('sCount').textContent = '全' + D.students.length + '名中 ' + rows.length + '名を表示'
       + (cond.length ? '｜条件：' + cond.join(' + ') : '')
       + '（🔔 通知オン ' + pushOn + '名）';
     if (!rows.length) { $('studentTable').innerHTML = '<div class="empty">閲覧者がまだ登録されていません。</div>'; return; }
 
     $('studentTable').innerHTML = '<div class="scrollx"><table class="grid"><thead><tr>'
-      + '<th>行</th><th>名前</th><th>メールアドレス</th><th>パスワード</th><th>タグ（視聴できるコース）</th><th>状態</th><th>通知</th><th>LINE</th><th></th>'
+      + '<th>行</th><th>名前</th><th>メールアドレス</th><th>パスワード</th><th>タグ（視聴できるコース）</th><th>視聴</th><th>状態</th><th>通知</th><th>LINE</th><th></th>'
       + '</tr></thead><tbody>'
       + rows.map(function (s) {
         return '<tr>'
@@ -690,6 +710,7 @@
           + '<td>' + esc(s.email) + '</td>'
           + '<td class="narrow"><code>' + esc(s.pass || '—') + '</code></td>'
           + '<td>' + (s.tags ? s.tags.split(',').map(function (t) { return '<span class="tag-chip">' + esc(t.trim()) + '</span>'; }).join('') : '<span class="hint">未設定</span>') + '</td>'
+          + '<td class="narrow">' + watchCell(s) + '</td>'
           + '<td class="narrow">' + (/停止|無効|退会/.test(s.status) ? '<span class="pill off">停止</span>' : '<span class="pill ok">有効</span>') + '</td>'
           + '<td class="narrow">' + (function () {
               var p = D.push[s.email.toLowerCase()];

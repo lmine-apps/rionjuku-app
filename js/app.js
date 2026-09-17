@@ -15,7 +15,8 @@
     flat: [],        // 表示順に並べたレッスン
     vi: -1,          // 視聴中のレッスン
     player: null,
-    openChaps: {}    // 章の開閉状態
+    openChaps: {},   // 章の開閉状態
+    watched: {}      // 観た動画のID（サーバーの「視聴状況」と同じ中身）
   };
   var WATCH_KEY = 'rj_watched', READ_KEY = 'rj_news_read', LIKE_KEY = 'rj_news_liked', ORDER_KEY = 'rj_order';
   var uid = RJ.pickUid();
@@ -26,14 +27,75 @@
   function order() { try { return localStorage.getItem(ORDER_KEY) || 'new'; } catch (e) { return 'new'; } }
   function setOrder(v) { try { localStorage.setItem(ORDER_KEY, v); } catch (e) {} }
 
-  // ---------- 視聴済み（この端末のみ） ----------
+  // ---------- 視聴済み ----------
+  // 記録はスプレッドシート（「視聴状況」タブ）が正。端末には画面をすぐ描くための控えを置く。
+  // state.watched は「観た動画のID」の集合。
   function watchKey(v) { return v.id + '|' + v.title; }
-  function isWatched(v) { return !!ls(WATCH_KEY)[watchKey(v)]; }
-  function toggleWatched(v) {
-    var w = ls(WATCH_KEY);
-    if (w[watchKey(v)]) delete w[watchKey(v)]; else w[watchKey(v)] = 1;
-    lsSave(WATCH_KEY, w);
-    return !!w[watchKey(v)];
+  function isWatched(v) { return !!(v && state.watched[v.id]); }
+
+  /** 印を付ける／外す。画面はすぐ変えて、サーバーへは裏で送る */
+  function setWatched(v, on) {
+    if (!v) return;
+    if (on) state.watched[v.id] = 1; else delete state.watched[v.id];
+    saveWatchCache();
+    api('watch_save', { token: store.token(), id: v.id, done: on ? 1 : 0 })
+      .catch(function () {});          // 通信が切れていても画面は進める
+  }
+  function toggleWatched(v) { setWatched(v, !isWatched(v)); return isWatched(v); }
+
+  /** 端末の控え（ログインした人ごとに分ける） */
+  function watchCacheKey() {
+    return WATCH_KEY + ':' + ((state.user && state.user.email) || '');
+  }
+  function saveWatchCache() {
+    try { localStorage.setItem(watchCacheKey(), Object.keys(state.watched).join(',')); } catch (e) {}
+  }
+  function loadWatchCache() {
+    try {
+      var raw = localStorage.getItem(watchCacheKey()) || '';
+      raw.split(',').forEach(function (x) { if (x) state.watched[Number(x)] = 1; });
+    } catch (e) {}
+  }
+
+  /**
+   * 旧version（端末だけに持っていた頃）の記録をサーバーへ引き継ぐ。
+   * 1回だけ実行し、済んだら印を付けて二度と走らせない。
+   */
+  function migrateOldWatched() {
+    var done = 'rj_watch_moved:' + ((state.user && state.user.email) || '');
+    try { if (localStorage.getItem(done)) return; } catch (e) { return; }
+    var old = ls(WATCH_KEY);                 // { "12|タイトル": 1, ... }
+    var ids = Object.keys(old).map(function (k) { return Number(String(k).split('|')[0]); })
+      .filter(function (n) { return n > 0 && !state.watched[n]; });
+    try { localStorage.setItem(done, '1'); } catch (e) {}
+    if (!ids.length) return;
+    ids.forEach(function (id) { state.watched[id] = 1; });
+    saveWatchCache();
+    ids.forEach(function (id) {
+      api('watch_save', { token: store.token(), id: id, done: 1 }).catch(function () {});
+    });
+  }
+
+  /** 進捗（観た本数／観られる本数） */
+  function progress() {
+    var total = 0, done = 0;
+    state.courses.forEach(function (c) {
+      c.chapters.forEach(function (ch) {
+        ch.videos.forEach(function (v) { total++; if (isWatched(v)) done++; });
+      });
+    });
+    return { done: done, total: total, rate: total ? Math.round(done * 100 / total) : 0 };
+  }
+  function courseProgress(c) {
+    var total = 0, done = 0;
+    c.chapters.forEach(function (ch) {
+      ch.videos.forEach(function (v) { total++; if (isWatched(v)) done++; });
+    });
+    return { done: done, total: total, rate: total ? Math.round(done * 100 / total) : 0 };
+  }
+  function bar(pr) {
+    return '<span class="pg"><span class="pg-bar"><i style="width:' + pr.rate + '%"></i></span>'
+      + '<span class="pg-txt">' + pr.done + ' / ' + pr.total + '本</span></span>';
   }
 
   // ---------- ログイン ----------
@@ -395,22 +457,88 @@
   }
 
   // ---------- 起動 ----------
+  /**
+   * 前回の一覧を端末に控えておき、次からは「まず控えを出す → 裏で最新に差し替える」。
+   * 待ち時間のほとんどはGASの起動と通信なので、これだけで体感がかなり変わる。
+   */
+  var DATA_KEY = 'rj_data';
+  function dataCacheKey() { return DATA_KEY + ':' + (store.user() ? store.user().email : ''); }
+  function saveDataCache(res) {
+    try {
+      localStorage.setItem(dataCacheKey(), JSON.stringify({
+        at: Date.now(), user: res.user, courses: res.courses, news: res.news, myReplies: res.myReplies
+      }));
+    } catch (e) {}                      // 容量オーバーなどは黙って諦める（次回は普通に読む）
+  }
+  function loadDataCache() {
+    try {
+      var raw = localStorage.getItem(dataCacheKey());
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      if (!d || !d.courses) return null;
+      if (Date.now() - (d.at || 0) > 7 * 86400000) return null;   // 1週間より古ければ使わない
+      return d;
+    } catch (e) { return null; }
+  }
+  function applyData(res) {
+    state.user = res.user;
+    state.courses = res.courses || [];
+    state.news = res.news || [];
+    state.myReplies = res.myReplies || {};
+    if (res.watched) {
+      state.watched = {};
+      res.watched.forEach(function (id) { state.watched[id] = 1; });
+      saveWatchCache();
+    }
+  }
+
   function start() {
     if (!store.token()) { showLogin(); return; }
-    api('data', { token: store.token(), uid: uid })
+
+    // ① 控えがあれば、待たずに描く
+    var cached = loadDataCache();
+    var shown = false;
+    if (cached) {
+      applyData(cached);
+      loadWatchCache();
+      renderApp();
+      shown = true;
+    }
+
+    // ② 裏で最新を取りにいく
+    api('data', { token: store.token(), uid: uid }, { quiet: shown })
       .then(function (res) {
         if (!res || !res.ok) {
-          if (res && (res.error === 'unauthorized' || res.error === 'stopped')) store.clear();
-          showLogin(RJ.errMsg(res));
+          if (res && (res.error === 'unauthorized' || res.error === 'stopped')) {
+            store.clear();
+            try { localStorage.removeItem(dataCacheKey()); } catch (e) {}
+            showLogin(RJ.errMsg(res));
+            return;
+          }
+          if (!shown) showLogin(RJ.errMsg(res));   // 控えを出せているなら黙って諦める
           return;
         }
-        state.user = res.user;
-        state.courses = res.courses || [];
-        state.news = res.news || [];
-        state.myReplies = res.myReplies || {};
-        renderApp();
+        applyData(res);
+        saveDataCache(res);
+        migrateOldWatched();
+        if (shown) reRender(); else renderApp();
       })
-      .catch(function (e) { showLogin(e.message); });
+      .catch(function (e) { if (!shown) showLogin(e.message); });
+  }
+
+  /** 最新データで今の画面を描き直す（見ている場所は保つ） */
+  function reRender() {
+    if (!$('scWatch').classList.contains('hidden') && state.vi >= 0) {
+      var cur = state.flat[state.vi];
+      renderSideChapters();
+      if (cur) renderChapList(cur.chapter);
+      paintProgress();
+    } else if (!$('scPicker').classList.contains('hidden')) {
+      showPicker();
+    } else {
+      renderApp();
+    }
+    renderNewsBadge();
   }
 
   function showLogin(message) {
@@ -466,13 +594,13 @@
     state.ci = -1;
     show('scPicker');
     $('pickerList').innerHTML = state.courses.map(function (c, i) {
-      var n = c.chapters.reduce(function (a, ch) { return a + ch.videos.length; }, 0);
-      var done = 0;
-      c.chapters.forEach(function (ch) { ch.videos.forEach(function (v) { if (isWatched(v)) done++; }); });
+      var pr = courseProgress(c);
       return '<button class="pick" data-i="' + i + '" type="button">'
         + '<span class="pick-name">' + esc(c.name) + (c.mark ? '<span class="mk">' + esc(c.mark) + '</span>' : '') + '</span>'
         + (c.desc ? '<span class="pick-desc">' + esc(c.desc) + '</span>' : '')
-        + '<span class="pick-meta">全' + n + '本' + (done ? '　視聴済み ' + done + '本' : '') + '</span>'
+        + '<span class="pick-meta">全' + pr.total + '本'
+        + (pr.done ? '　視聴済み ' + pr.done + '本' : '') + '</span>'
+        + bar(pr)
         + '</button>';
     }).join('');
     Array.prototype.forEach.call($('pickerList').querySelectorAll('.pick'), function (b) {
@@ -523,12 +651,21 @@
   }
 
   /** 左：章＋レッスン（章タップで開閉） */
+  /** 進捗の表示だけ更新する（一覧を作り直さずに済ませる） */
+  function paintProgress() {
+    var el = $('sideProgress');
+    if (el && state.ci >= 0 && state.courses[state.ci]) {
+      el.innerHTML = bar(courseProgress(state.courses[state.ci]));
+    }
+  }
+
   function renderSideChapters() {
     var c = state.courses[state.ci];
     $('sideHead').innerHTML =
       (state.courses.length > 1
         ? '<button class="side-back" id="toPicker" type="button">← コースを変更</button>' : '')
       + '<h2 class="side-course">' + esc(c.name) + '</h2>'
+      + '<div class="side-progress" id="sideProgress">' + bar(courseProgress(c)) + '</div>'
       + '<div class="side-order">'
       + '<button class="ord' + (order() === 'new' ? ' on' : '') + '" data-ord="new" type="button">新しい順</button>'
       + '<button class="ord' + (order() === 'old' ? ' on' : '') + '" data-ord="old" type="button">古い順</button>'
@@ -700,12 +837,47 @@
       done.className = on ? 'on' : '';
     }
     paintDone();
-    done.onclick = function () { toggleWatched(v); paintDone(); renderSideChapters(); renderChapList(item.chapter); };
+    done.onclick = function () {
+      toggleWatched(v);
+      paintDone();
+      renderSideChapters();
+      renderChapList(item.chapter);
+    };
+
+    // 9割まで観たら自動で「視聴済み」にする（本人が外すこともできる）
+    watchAuto(v);
 
     $('prevBtn').disabled = (i <= 0);
     $('nextBtn').disabled = (i >= state.flat.length - 1);
     renderSideChapters();
     window.scrollTo(0, 0);
+  }
+
+  /**
+   * 9割まで再生されたら、自動で「視聴済み」にする。
+   * ・Vimeoの再生位置を purcent で受け取る（player.js が読み込めていないときは何もしない）
+   * ・一度付けたら、その動画では二度と送らない
+   * ・本人が手で外した場合は、同じ再生中はもう付け直さない（お節介にしない）
+   */
+  function watchAuto(v) {
+    var p = state.player;
+    if (!p || !p.on) return;
+    var fired = false;
+    try {
+      p.off('timeupdate');                 // 前の動画の監視が残らないように
+      p.on('timeupdate', function (d) {
+        if (fired || !d || !d.percent) return;
+        if (d.percent < 0.9) return;
+        fired = true;
+        if (isWatched(v)) return;
+        setWatched(v, true);
+        var btn = $('doneBtn');
+        if (btn) { btn.textContent = '✓ 視聴済み'; btn.className = 'on'; }
+        renderSideChapters();
+        var item = state.flat[state.vi];
+        if (item) renderChapList(item.chapter);
+      });
+    } catch (e) {}                          // 監視できない環境でも視聴そのものは妨げない
   }
 
   /** 運営が並べた「文章・画像・音声」をそのまま順番に出す */

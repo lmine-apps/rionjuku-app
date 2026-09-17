@@ -61,6 +61,8 @@
     }
   };
 
+  var WATCHED = { 2: 1 };      // デモ：入学式だけ視聴済みにしておく
+
   function todayStr() { return d(0); }
 
   /** 視聴開始／期限から状態を出す（GAS側と同じ考え方） */
@@ -169,9 +171,16 @@
         var me = user(mail);
         if (!me) { resolve({ ok: false, error: 'unauthorized' }); return; }
 
+        if (action === 'watch_save') {
+          var wid = Number(p.id);
+          if (String(p.done) === '0') delete WATCHED[wid]; else WATCHED[wid] = 1;
+          resolve({ ok: true, watched: Object.keys(WATCHED).map(Number) });
+          return;
+        }
         if (action === 'data') {
           resolve({
             ok: true, user: me, courses: buildCourses(me), news: newsFor(me),
+            watched: Object.keys(WATCHED).map(Number),
             myReplies: me.email === 'demo@example.com' ? {} : {}
           });
           return;
@@ -200,7 +209,18 @@
         if (action === 'admin_data') {
           resolve({
             ok: true, user: me, videos: adminVideos(), courses: COURSES,
-            orphanCourses: [], students: STUDENTS, news: NEWS, replies: REPLIES, quickLogin: false
+            orphanCourses: [],
+            students: STUDENTS.map(function (st) {
+              var u = user(st.email);
+              var tot = u ? buildCourses(u).reduce(function (a, c) {
+                return a + c.chapters.reduce(function (b, ch) { return b + ch.videos.length; }, 0);
+              }, 0) : 0;
+              var dn = Object.keys(WATCHED).length && st.email === 'demo@example.com' ? Object.keys(WATCHED).length : 0;
+              return Object.assign({}, st, {
+                watched: dn, watchTotal: tot, watchRate: tot ? Math.round(dn * 100 / tot) : 0
+              });
+            }),
+            news: NEWS, replies: REPLIES, quickLogin: false
           });
           return;
         }

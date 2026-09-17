@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.8.0
+ * VERSION: v1.8.1
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -15,7 +15,7 @@
 
 // ===== 設定 =====
 // ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
-const VERSION = 'v1.8.0';
+const VERSION = 'v1.8.1';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -724,8 +724,9 @@ function apiAdminData_(p) {
     courses: cs.list,
     orphanCourses: orphans,
     students: (function () {
-      const stats = watchStats_();
-      return students_().map(function (s) {
+      const sts = students_();
+      const stats = watchStats_(cs, vids, sts);
+      return sts.map(function (s) {
         const w = stats[email_(s.email)] || { done: 0, total: 0, rate: 0 };
         return {
           row: s.row, name: s.name, email: s.email, pass: s.pass, tags: s.tags.join(','),
@@ -1268,13 +1269,15 @@ function apiWatchSave_(p) {
  * 運営画面用：一人ひとりの「観た本数／観られる本数」を出す
  * 分母は data と同じ考え方（非公開を除く・公開前や期限切れも数に入れる）
  */
-function watchStats_() {
-  const cs = courses_();
-  const vids = videos_().filter(function (v) { return !v.hidden; });
+function watchStats_(cs, allVids, sts) {
+  // 呼び出し元が既に読んでいるものを受け取る（同じシートを二度読まないため）
+  cs = cs || courses_();
+  const vids = (allVids || videos_()).filter(function (v) { return !v.hidden; });
+  const students = sts || students_();
   const watched = watchAll_();
   const out = {};
 
-  students_().forEach(function (st) {
+  students.forEach(function (st) {
     const mail = email_(st.email);
     const tags = st.tags || [];
     const ids = {};

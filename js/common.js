@@ -73,9 +73,10 @@
   };
 
   /** GAS門番へのPOST（URLSearchParamsなのでプリフライトが飛ばない） */
-  function api(action, params) {
+  function api(action, params, opt) {
+    opt = opt || {};
     if (MOCK && w.RJ_MOCK) {
-      var ml = BUSY_LABEL[action];
+      var ml = opt.quiet ? '' : BUSY_LABEL[action];
       if (ml) busyShow(ml);
       return w.RJ_MOCK(action, params).then(function (r) { if (ml) busyHide(); return r; },
                                             function (e) { if (ml) busyHide(); throw e; });
@@ -90,7 +91,7 @@
       if (v === undefined || v === null) return;
       body.set(k, String(v));
     });
-    var label = BUSY_LABEL[action];
+    var label = opt.quiet ? '' : BUSY_LABEL[action];   // 裏での更新中は待たせない
     if (label) busyShow(label);
     return fetch(CFG.GAS_URL, { method: 'POST', body: body })
       .then(function (res) { return res.text(); })
