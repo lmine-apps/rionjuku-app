@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.7.2
+ * VERSION: v1.8.0
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -15,7 +15,7 @@
 
 // ===== 設定 =====
 // ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
-const VERSION = 'v1.7.2';
+const VERSION = 'v1.8.0';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -24,6 +24,7 @@ const SH_NEWS    = 'お知らせ';
 const SH_REPLY   = 'お知らせ回答';
 const SH_LOG     = 'ログイン履歴';
 const SH_PUSH    = 'プッシュ';      // 通知の宛先（端末トークン）
+const SH_WATCH   = '視聴状況';      // 誰がどの動画を観たか（1人1行）
 const TOKEN_DAYS = 30;             // ログイン保持日数
 const MAX_FAIL   = 10;             // 同一メールの連続失敗許容数（10分間）
 const TZ         = 'Asia/Tokyo';
@@ -74,6 +75,7 @@ function doPost(e) {
       case 'line_link':     return out_(apiLineLink_(p));
       case 'news_like':     return out_(apiNewsLike_(p));
       case 'news_reply':    return out_(apiNewsReply_(p));
+      case 'watch_save':    return out_(apiWatchSave_(p));
       case 'push_reg':      return out_(apiPushReg_(p));
       case 'push_unreg':    return out_(apiPushUnreg_(p));
       case 'news_push':     return out_(apiNewsPush_(p));
@@ -589,12 +591,31 @@ function apiData_(p) {
       };
     });
 
+  // この人に割り当たっている動画のID（＝シートの行番号）を集める
+  const idSet = {};
+  courseList.forEach(function (c) {
+    c.chapters.forEach(function (ch) {
+      ch.videos.forEach(function (v) { idSet[v.id] = true; });
+    });
+  });
+
+  // 進捗（観た本数／観られる本数）。分母は非公開を除いた「その人に割り当たっている本数」。
+  // 公開前・期限切れも分母に含める（期限が切れるたびに％が跳ね上がらないようにするため）
+  let total = 0;
+  courseList.forEach(function (c) {
+    c.chapters.forEach(function (ch) { total += ch.videos.length; });
+  });
+  const watched = watchGet_(u.email);
+  const mine = watched.filter(function (id) { return idSet[id]; });
+
   return {
     ok: true,
     user: userPayload_(u),
     courses: courseList,
     news: newsForUser_(u),
-    myReplies: myReplies_(u)
+    myReplies: myReplies_(u),
+    watched: mine,
+    progress: { done: mine.length, total: total }
   };
 }
 
@@ -702,12 +723,17 @@ function apiAdminData_(p) {
     videos: vids,
     courses: cs.list,
     orphanCourses: orphans,
-    students: students_().map(function (s) {
-      return {
-        row: s.row, name: s.name, email: s.email, pass: s.pass, tags: s.tags.join(','),
-        status: s.status, memo: s.memo, joined: s.joined, uid: s.uid, firstSet: s.firstSet
-      };
-    }),
+    students: (function () {
+      const stats = watchStats_();
+      return students_().map(function (s) {
+        const w = stats[email_(s.email)] || { done: 0, total: 0, rate: 0 };
+        return {
+          row: s.row, name: s.name, email: s.email, pass: s.pass, tags: s.tags.join(','),
+          status: s.status, memo: s.memo, joined: s.joined, uid: s.uid, firstSet: s.firstSet,
+          watched: w.done, watchTotal: w.total, watchRate: w.rate
+        };
+      });
+    })(),
     news: news_(),
     replies: replySummary_(),
     push: pushSummary_(),
@@ -1164,6 +1190,110 @@ function checkPush() {
 }
 
 
+
+// ===== 視聴状況（誰がどの動画を観たか） =====
+// 1人1行。B列に動画のID（＝動画一覧の行番号）をカンマ区切りで持つ。
+// 150名×150本でも150行で収まるので、読み書きが軽い。
+function watchSheet_() {
+  return sheetOrCreate_(SH_WATCH, ['メールアドレス', '視聴済みID', '本数', '最終更新']);
+}
+
+/** その人の視聴済みID（数値の配列）を返す */
+function watchGet_(email) {
+  const map = watchAll_();
+  return map[email_(email)] || [];
+}
+
+/** 全員ぶんを {メール: [id,...]} で返す（運営画面の集計用に1回だけ読む） */
+function watchAll_() {
+  const out = {};
+  try {
+    const sh = watchSheet_();
+    const last = sh.getLastRow();
+    if (last < 2) return out;
+    const rows = sh.getRange(2, 1, last - 1, 2).getValues();
+    rows.forEach(function (r) {
+      const m = email_(r[0]);
+      if (!m) return;
+      out[m] = s_(r[1]).split(',').map(function (x) { return Number(x); })
+        .filter(function (n) { return n > 0; });
+    });
+  } catch (err) {}
+  return out;
+}
+
+/**
+ * 視聴済みの印を付ける／外す
+ *   id   … 動画のID（動画一覧の行番号）
+ *   done … 1なら付ける、0なら外す
+ * 何度呼んでも同じ結果になる（重複して増えない）。
+ */
+function apiWatchSave_(p) {
+  const g = me_(p); if (!g.ok) return g;
+  const id = Number(p.id);
+  if (!id || id < 2) return { ok: false, error: 'bad_id' };
+  const on = s_(p.done) !== '0' && s_(p.done) !== '';
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = watchSheet_();
+    const mail = email_(g.user.email);
+    const last = sh.getLastRow();
+    let row = 0, cur = [];
+    if (last >= 2) {
+      const rows = sh.getRange(2, 1, last - 1, 2).getValues();
+      for (let i = 0; i < rows.length; i++) {
+        if (email_(rows[i][0]) === mail) {
+          row = i + 2;
+          cur = s_(rows[i][1]).split(',').map(Number).filter(function (n) { return n > 0; });
+          break;
+        }
+      }
+    }
+    const has = cur.indexOf(id) >= 0;
+    if (on && !has) cur.push(id);
+    if (!on && has) cur = cur.filter(function (n) { return n !== id; });
+    cur.sort(function (a, b) { return a - b; });
+
+    const vals = [mail, cur.join(','), cur.length, nowStr_()];
+    if (row) sh.getRange(row, 1, 1, 4).setValues([vals]);
+    else sh.appendRow(vals);
+
+    return { ok: true, watched: cur };
+  } finally { lock.releaseLock(); }
+}
+
+/**
+ * 運営画面用：一人ひとりの「観た本数／観られる本数」を出す
+ * 分母は data と同じ考え方（非公開を除く・公開前や期限切れも数に入れる）
+ */
+function watchStats_() {
+  const cs = courses_();
+  const vids = videos_().filter(function (v) { return !v.hidden; });
+  const watched = watchAll_();
+  const out = {};
+
+  students_().forEach(function (st) {
+    const mail = email_(st.email);
+    const tags = st.tags || [];
+    const ids = {};
+    let total = 0;
+    vids.forEach(function (v) {
+      const conf = cs.map[v.course];
+      if (conf && !conf.published && !st.admin) return;
+      const need = v.tag ? tags_(v.tag) : [(conf ? conf.tag : v.course)];
+      const ok = st.admin || need.some(function (t) { return tags.indexOf(t) >= 0; });
+      if (!ok) return;
+      total++;
+      ids[v.row] = true;
+    });
+    const done = (watched[mail] || []).filter(function (id) { return ids[id]; }).length;
+    out[mail] = { done: done, total: total, rate: total ? Math.round(done * 100 / total) : 0 };
+  });
+  return out;
+}
+
 // ===== 列の引っ越し（1回だけ実行する） =====
 /**
  * 動画一覧の列を、新しい並びへ移す。
@@ -1248,6 +1378,8 @@ function apiSetup_(p) {
   Object.keys(heads).forEach(function (col) {
     if (!s_(sh.getRange(1, Number(col)).getValue())) sh.getRange(1, Number(col)).setValue(heads[col]);
   });
+
+  watchSheet_();          // 視聴状況シート（無ければ作る）
 
   const ssh = studentSheet_();
   if (!s_(ssh.getRange(1, S_UID).getValue()))   ssh.getRange(1, S_UID).setValue('LINE UID');
