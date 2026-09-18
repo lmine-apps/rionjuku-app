@@ -4,6 +4,11 @@
    （濃紺 × スカイブルー／見出しは明朝／数字はGeorgia）
 ========================================================= */
 :root {
+  --student-photo: url("../assets/miko-background.jpg");
+  --student-photo-login-opacity: .42;
+  --student-photo-app-opacity: .12;
+  --student-photo-mask: #000000;
+  --student-photo-clear: rgba(0, 0, 0, 0);
   /* 受講生ページ用。既存の共通トークンは維持する。 */
   --student-paper: #ffffff;
   --student-canvas: #f4f8fb;
@@ -1265,4 +1270,31 @@ html.student-page.shooting body.has-demo-bar { --student-demo-offset: 0px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .student-page .guide-host *, .student-page .guide-host *::before, .student-page .guide-host *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+/* 写真は装飾レイヤーだけに置き、入力欄・教材カードの白を保つ。 */
+.student-page body { isolation: isolate; }
+.student-page body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--student-photo) 62% 42% / cover no-repeat;
+  filter: saturate(.45); opacity: var(--student-photo-app-opacity);
+}
+.student-page .login-wrap {
+  position: relative; isolation: isolate; overflow: hidden;
+  background: var(--student-canvas);
+}
+.student-page .login-wrap::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--student-photo) center 42% / cover no-repeat;
+  filter: saturate(.45); opacity: var(--student-photo-login-opacity);
+}
+@media (min-width: 901px) {
+  .student-page .login-wrap { justify-items: start; padding-left: max(40px, calc((100vw - 1120px) / 2)); }
+}
+@media (max-width: 560px) {
+  .student-page .login-wrap { padding-top: 210px; align-items: start; }
+  .student-page .login-wrap::before { background-size: auto 620px; background-position: center -140px; mask-image: linear-gradient(var(--student-photo-mask) 180px, var(--student-photo-clear) 480px); }
+  .student-page body::before { background-position: 60% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .student-page body::before, .student-page .login-wrap::before { animation: none !important; transition: none !important; }
 }
