@@ -505,96 +505,131 @@
 
   // ---------- 使い方ガイド ----------
   var GUIDE = [
-    {
-      t: 'ようこそ、凛穏塾の動画ページへ',
-      b: '<p>これまでの講義動画を、いつでも何度でもご覧いただけます。</p>'
-        + '<p>まずは簡単に、使い方をご案内します（1分ほどです）。</p>'
-    },
-    {
-      t: '観たい動画の選び方',
-      b: '<p>ご受講のコースが複数ある方は、最初に<b>コースを選ぶ画面</b>が出ます。</p>'
-        + '<p>コースを選ぶと動画が再生され、<b>左側（スマホは「目次」ボタン）</b>から'
-        + '章ごとのレッスン一覧を開けます。章名をタップすると折りたためます。</p>'
-    },
-    {
-      t: '観たい場面へ飛べます',
-      b: '<p>動画の下に<b>目次</b>がある回では、<b>時刻をタップするとその場面から</b>再生されます。</p>'
-        + '<p>観終わった動画は「□ 視聴済みにする」を押しておくと、一覧に ✓ が付きます。</p>'
-    },
-    {
-      t: 'ホーム画面に置くと便利です',
-      b: '<div class="guide-tab"><button class="gt on" data-os="ios" type="button">iPhone</button>'
-        + '<button class="gt" data-os="and" type="button">Android</button></div>'
-        + '<div id="guideOsIos"><ol class="guide-ol">'
-        + '<li>画面下の<b>共有ボタン</b>（□に↑）を押します</li>'
-        + '<li>メニューを下にたどって<b>「ホーム画面に追加」</b>を選びます</li>'
-        + '<li>右上の「追加」を押すと、アプリのように開けます</li></ol></div>'
-        + '<div id="guideOsAnd" class="hidden"><ol class="guide-ol">'
-        + '<li>右上の<b>「︙」</b>を押します</li>'
-        + '<li><b>「ホーム画面に追加」</b>を選びます</li>'
-        + '<li>「追加」を押すと、アプリのように開けます</li></ol></div>'
-    },
-    {
-      t: '困ったときは',
-      b: '<p><b>パスワードを忘れた</b>…運営スタッフへご連絡ください。再設定できます。</p>'
-        + '<p><b>パソコンで観たい</b>…右上のメニューから「パソコンで見る」でアドレスをコピーできます。</p>'
-        + '<p><b>動画が観られない</b>…Wi-Fi環境でお試しください。それでも出ない場合はご連絡ください。</p>'
-        + '<p>このガイドは、右上のメニュー「📖 使い方ガイド」からいつでも見られます。</p>'
-        + '<p style="margin-bottom:0"><a href="guide.html" target="_blank" rel="noopener">&#128214; くわしい使い方（画面つき）を見る</a></p>'
-    }
+    { t: '動画を見てみましょう', label: '視聴の仕方', icon: '▶', b:
+      '<p class="guide-lead">見たい講義を選び、ご自分のペースで学べます。</p>'
+      + '<ol class="guide-ol"><li><b>受講コースを選びます</b><br>コースが1つの方は、動画の画面から始まります。</li>'
+      + '<li><b>「目次」から動画を選びます</b><br>スマホは画面左の「目次」、パソコンは左側の一覧を開きます。</li>'
+      + '<li><b>動画の ▶ を押して再生します</b><br>止めたいときは、動画内の一時停止ボタンを押します。</li></ol>' },
+    { t: '続きから、好きな場面から', label: '便利な見方', icon: '↻', b:
+      '<div class="guide-tip"><b>前回の続き</b><p>「○分から再開」で、前回止めたところから。「はじめから見る」も選べます。</p></div>'
+      + '<p>再生位置は<b>同じ端末・同じブラウザ</b>に保存されます。</p>'
+      + '<p>動画の下にある<b>目次の時刻</b>を押すと、その場面へ移動できます。</p>'
+      + '<p>約9割まで見ると<b>視聴済みの ✓</b>が付きます。「視聴済みにする」ボタンでも切り替えられます。</p>' },
+    { t: 'ホーム画面からすぐ開けます', label: 'アプリの開き方', icon: '⌂', b:
+      '<p class="guide-lead">スマホのホーム画面に、凛穏塾のアイコンを置きましょう。</p>'
+      + '<div class="guide-tab" aria-label="端末を選択"><button class="gt on" data-os="ios" aria-pressed="true" type="button">iPhone</button><button class="gt" data-os="and" aria-pressed="false" type="button">Android</button></div>'
+      + '<div id="guideOsIos"><ol class="guide-ol"><li><b>Safari</b>でこのページを開きます。</li><li><b>共有（□に↑）→「ホーム画面に追加」</b>を選びます。</li><li>「Webアプリとして開く」がある場合はオンにして<b>「追加」</b>。追加したアイコンから開きます。</li></ol></div>'
+      + '<div id="guideOsAnd" class="hidden"><ol class="guide-ol"><li><b>Chrome</b>でこのページを開きます。</li><li><b>右上の︙ →「ホーム画面に追加」</b>を選びます。</li><li>「インストール」または「追加」の案内に沿って進み、アイコンから開きます。</li></ol></div>'
+      + '<p class="guide-caption">表示名やボタンの位置は、端末によって異なります。</p>' },
+    { t: '通知を受け取るには', label: '通知設定', icon: '🔔', b:
+      '<p class="guide-lead">新しいお知らせに気づけるよう、通知を設定できます。</p>'
+      + '<div class="guide-tab" aria-label="端末を選択"><button class="gt on" data-os="ios" aria-pressed="true" type="button">iPhone</button><button class="gt" data-os="and" aria-pressed="false" type="button">Android</button></div>'
+      + '<div id="guideOsIos"><p class="guide-tip"><b>先にホーム画面へ追加</b><br>追加した凛穏塾のアイコンから開いてください。iOS 16.4以降に対応しています。</p></div>'
+      + '<div id="guideOsAnd" class="hidden"><p class="guide-tip"><b>Chromeで開いて設定</b><br>端末側でChromeの通知がオフになっていないかも確認してください。</p></div>'
+      + '<ol class="guide-ol"><li>右上の<b>メニュー（☰／お名前）</b>を開きます。</li><li><b>「通知の設定」→「通知をオンにする」</b>を押します。</li><li>許可を求められたら<b>「許可」</b>を選びます。</li></ol>'
+      + '<p class="guide-caption">以前「許可しない」を選んだ場合は、端末やブラウザの通知設定を確認してください。通知を使わなくても、画面上の「お知らせ」から読めます。</p>' },
+    { t: '困ったときも、このガイドへ', label: 'いつでも読み直せます', icon: '?', b:
+      '<div class="guide-tip"><b>右上のメニュー →「使い方ガイド」</b><p>「今後表示しない」を選んだ後も、ここから読み直せます。</p></div>'
+      + '<p><b>動画が見られないとき</b><br>通信状態と、動画の公開日・視聴期限をご確認ください。</p>'
+      + '<p><b>ログインできないとき</b><br>運営スタッフへお問い合わせください。</p>'
+      + '<p class="guide-caption">「スキップ」は今回だけ閉じます。「今後表示しない」は、この端末・ブラウザでの自動表示を止めます。</p>' }
   ];
-
-  /**
-   * 使い方ガイド
-   * @param {number} page  何ページ目から出すか
-   * @param {boolean} auto ログイン直後に自動で出したときは true
-   *   auto のときだけ「もう表示しない」を出し、閉じた時点で二度と自動表示しない。
-   *   （メニューの「📖 使い方ガイド」からはいつでも見られる）
-   */
-  // マニュアル用の画面キャプチャ中か（デモモード＋?shot= のときだけ true）
   var SHOOTING = RJ.MOCK && /[?&]shot=/.test(location.search);
-
-  function showGuide(page, auto) {
-    var i = page || 0;
-    var last = (i === GUIDE.length - 1);
-    var g = GUIDE[i];
-    var m = RJ.modal(g.t,
-      '<div class="guide-body">' + g.b + '</div>'
-      + '<div class="guide-dots">' + GUIDE.map(function (_, k) {
-        return '<span class="' + (k === i ? 'on' : '') + '"></span>';
-      }).join('') + '</div>',
-      last
-        ? function (close) { close(); markGuideSeen(); }
-        : function (close) { close(); showGuide(i + 1, auto); },
-      {
-        saveText: last ? 'はじめる' : '次へ',
-        cancelText: (auto && !last) ? 'もう表示しない' : '閉じる'
-      });
-
-    // 自動表示のときは、途中で閉じてもそこで打ち切る（次回から出さない）
-    if (auto) {
-      var cancelBtn = m.host.querySelector('[data-cancel]');
-      if (cancelBtn) cancelBtn.addEventListener('click', markGuideSeen);
-      m.host.querySelector('.modal-bg').addEventListener('click', function (ev) {
-        if (ev.target === ev.currentTarget) markGuideSeen();
-      });
-    }
-
-    // ホーム画面追加のiPhone/Android切替
-    var tabs = m.host.querySelectorAll('.gt');
-    Array.prototype.forEach.call(tabs, function (b) {
-      b.addEventListener('click', function () {
-        Array.prototype.forEach.call(tabs, function (x) { x.classList.remove('on'); });
-        b.classList.add('on');
-        m.host.querySelector('#guideOsIos').classList.toggle('hidden', b.dataset.os !== 'ios');
-        m.host.querySelector('#guideOsAnd').classList.toggle('hidden', b.dataset.os !== 'and');
-      });
-    });
-    if (last) markGuideSeen();
+  var guideTimer = null, guideStartupShown = false, guideClose = null;
+  // 旧rj_guideは「閉じた」だけでも保存されていたため、明示的な非表示設定と区別する。
+  function guideKey() {
+    return 'rj_guide_hide:v2:' + (RJ.MOCK ? 'demo:' : 'live:')
+      + String(state.user && state.user.email || '').trim().toLowerCase();
   }
-  function markGuideSeen() { try { localStorage.setItem('rj_guide', '1'); } catch (e) {} }
-  function guideSeen() { try { return localStorage.getItem('rj_guide') === '1'; } catch (e) { return true; } }
-
+  function guideSeen() { try { return localStorage.getItem(guideKey()) === '1'; } catch (e) { return false; } }
+  function markGuideSeen() {
+    try { localStorage.setItem(guideKey(), '1'); return true; } catch (e) { return false; }
+  }
+  function scheduleGuide() {
+    if (SHOOTING || guideStartupShown) return;
+    guideStartupShown = true;
+    if (guideSeen()) { popupNews(); return; }
+    guideTimer = setTimeout(function () {
+      guideTimer = null;
+      if (!$('scApp').classList.contains('hidden') && !document.querySelector('.modal')) showGuide(0, true);
+    }, 1900);
+  }
+  function showGuide(page, auto) {
+    clearTimeout(guideTimer);
+    guideStartupShown = true;
+    if (guideClose) guideClose(false);
+    var i = Math.max(0, Math.min(GUIDE.length - 1, Number(page) || 0));
+    var previousFocus = document.activeElement, previousOverflow = document.body.style.overflow;
+    var backgrounds = [$('scApp'), $('scLogin')].filter(Boolean).map(function (el) {
+      var inert = el.inert; el.inert = true; return { el: el, inert: inert };
+    });
+    var host = document.createElement('div'); host.className = 'guide-host';
+    host.innerHTML = '<div class="modal-bg"><section class="modal guide-book" role="dialog" aria-modal="true" aria-labelledby="guideTitle">'
+      + '<header class="guide-top"><span>凛穏塾の使い方</span><span id="guideCount"></span></header>'
+      + '<div class="guide-scroll"><div class="guide-emblem" aria-hidden="true"></div><p class="guide-section"></p>'
+      + '<h2 id="guideTitle" tabindex="-1"></h2><div class="guide-body"></div></div>'
+      + '<footer class="guide-footer"><div class="guide-dots" aria-hidden="true"></div>'
+      + '<div class="guide-nav"><button class="btn ghost" data-guide-back type="button">戻る</button><button class="btn" data-guide-next type="button">次へ</button></div>'
+      + '<div class="guide-dismiss"><button type="button" data-guide-skip>スキップ</button><button type="button" data-guide-hide>今後表示しない</button></div>'
+      + '<p class="guide-error" role="status" aria-live="polite"></p></footer></section></div>';
+    document.body.appendChild(host); document.body.style.overflow = 'hidden';
+    function q(selector) { return host.querySelector(selector); }
+    function close(notify) {
+      if (!host.parentNode) return;
+      host.parentNode.removeChild(host); document.body.style.overflow = previousOverflow;
+      backgrounds.forEach(function (b) { b.el.inert = b.inert; });
+      guideClose = null;
+      var focusTarget = previousFocus && previousFocus.isConnected && previousFocus.getClientRects().length ? previousFocus : acctBtn;
+      if (focusTarget) focusTarget.focus({ preventScroll: true });
+      if (auto && notify !== false && !$('scApp').classList.contains('hidden')) popupNews();
+    }
+    guideClose = close;
+    function paint() {
+      var g = GUIDE[i];
+      q('#guideCount').textContent = (i + 1) + ' / ' + GUIDE.length;
+      q('.guide-section').textContent = g.label;
+      q('.guide-emblem').textContent = g.icon;
+      if (i === 3) q('.guide-emblem').innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 7 3 7 3 8H3c0-1 3-1 3-8Z"/><path d="M9 20a3 3 0 0 0 6 0"/></svg>';
+      q('#guideTitle').textContent = g.t;
+      q('.guide-body').innerHTML = g.b;
+      if (i === 3 && !RJ.CFG.PUSH_READY) {
+        q('.guide-body').innerHTML = '<p class="guide-tip"><b>通知機能はただいま準備中です。</b><br>利用できるようになりましたら、右上のメニュー「通知の設定」でご案内します。</p><p>現在は、画面上の「お知らせ」から新着をご確認ください。</p>';
+      }
+      q('[data-guide-back]').disabled = i === 0;
+      q('[data-guide-next]').textContent = i === GUIDE.length - 1 ? '動画ページへ' : '次へ';
+      q('.guide-dots').innerHTML = GUIDE.map(function (_, k) { return '<span class="' + (k === i ? 'on' : '') + '"></span>'; }).join('');
+      q('.guide-scroll').scrollTop = 0;
+      q('.guide-error').textContent = '';
+      q('#guideTitle').focus({ preventScroll: true });
+      var tabs = host.querySelectorAll('.gt');
+      function selectOs(os) {
+        Array.prototype.forEach.call(tabs, function (b) {
+          var selected = b.dataset.os === os;
+          b.classList.toggle('on', selected); b.setAttribute('aria-pressed', String(selected));
+        });
+        q('#guideOsIos').classList.toggle('hidden', os !== 'ios');
+        q('#guideOsAnd').classList.toggle('hidden', os !== 'and');
+      }
+      Array.prototype.forEach.call(tabs, function (b) { b.onclick = function () { selectOs(b.dataset.os); }; });
+      if (tabs.length) selectOs(/Android/i.test(navigator.userAgent) ? 'and' : 'ios');
+    }
+    q('[data-guide-back]').onclick = function () { if (i > 0) { i--; paint(); } };
+    q('[data-guide-next]').onclick = function () { if (i < GUIDE.length - 1) { i++; paint(); } else close(); };
+    q('[data-guide-skip]').onclick = function () { close(); };
+    q('[data-guide-hide]').onclick = function () {
+      if (markGuideSeen()) close();
+      else q('.guide-error').textContent = 'このブラウザでは設定を保存できませんでした。「スキップ」で閉じられます。';
+    };
+    host.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') { ev.preventDefault(); close(); return; }
+      if (ev.key !== 'Tab') return;
+      var buttons = Array.prototype.filter.call(host.querySelectorAll('button:not([disabled])'), function (b) { return b.getClientRects().length; });
+      var first = buttons[0], last = buttons[buttons.length - 1];
+      if (ev.shiftKey && (document.activeElement === first || document.activeElement === q('#guideTitle'))) { ev.preventDefault(); last.focus(); }
+      else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+    });
+    paint();
+  }
   function editName() {
     RJ.modal('お名前を変更',
       '<div class="field"><label>アプリ内で表示されるお名前</label>'
@@ -719,6 +754,8 @@
 
   function showLogin(message) {
     endResumeSession(); resumeView++;
+    clearTimeout(guideTimer);
+    if (guideClose) guideClose(false);
     $('scApp').classList.add('hidden');
     $('scLogin').classList.remove('hidden');
     if (message) { $('loginMsg').className = 'msg err'; $('loginMsg').textContent = message; }
@@ -747,10 +784,8 @@
     } else {
       showPicker();                  // 複数ならコース選択
     }
-    // 初回は使い方ガイド、2回目以降は未読のお知らせポップ
-    if (SHOOTING) return;              // マニュアル用の撮影中は何も出さない
-    if (!guideSeen()) setTimeout(function () { showGuide(0, true); }, 1900);
-    else popupNews();
+    // 起動ごとに一度だけ。スキップは次回も表示、非表示は本人が選んだときだけ。
+    scheduleGuide();
   }
 
   /** 画面の切り替え */
@@ -1352,7 +1387,7 @@
         api('login', { email: 'demo@example.com', password: 'demo' }).then(function (res) {
           if (!res || !res.ok) return;
           store.save(res.token, res.user);
-          markGuideSeen();                 // 撮影中はガイドを出さない
+          // 撮影中の自動ガイド抑止はSHOOTINGで行う（非表示設定は変更しない）。
           start();
           if (what === 'menu') wait(function () { $('acctBtn').click(); }, 900);
           if (what === 'watch') wait(function () {
