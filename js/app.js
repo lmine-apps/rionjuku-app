@@ -27,6 +27,181 @@
   function order() { try { return localStorage.getItem(ORDER_KEY) || 'new'; } catch (e) { return 'new'; } }
   function setOrder(v) { try { localStorage.setItem(ORDER_KEY, v); } catch (e) {} }
 
+  // ---------- この端末で続きから見る ----------
+  // メール・デモ/本番ごとに分離。動画URL・トークンは記録しない。
+  var RESUME_PREFIX = 'rj_resume:v1:', resumeSession = null, resumeView = 0;
+  function resumeStorageKey() {
+    var mail = state.user && state.user.email;
+    return mail ? RESUME_PREFIX + (RJ.MOCK ? 'demo:' : 'live:') + String(mail).trim().toLowerCase() : '';
+  }
+  function validResume(r) {
+    return r && typeof r.course === 'string' && typeof r.id === 'string' && typeof r.media === 'string'
+      && typeof r.seconds === 'number' && isFinite(r.seconds) && r.seconds >= 5
+      && typeof r.duration === 'number' && isFinite(r.duration) && r.duration > r.seconds + 3
+      && typeof r.at === 'number' && isFinite(r.at) && r.at > Date.now() - 180 * 86400000;
+  }
+  function sameResume(a, b) { return a.course === b.course && a.id === b.id && a.media === b.media; }
+  function readResume(key) {
+    if (!key) return [];
+    try {
+      var data = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(data) ? data.filter(validResume).sort(function (a, b) { return b.at - a.at; }).slice(0, 30) : [];
+    } catch (e) { return []; }
+  }
+  function writeResume(key, record, remove) {
+    if (!key) return;
+    var list = readResume(key).filter(function (r) { return !sameResume(r, record); });
+    if (!remove && validResume(record)) list.unshift(record);
+    try { localStorage.setItem(key, JSON.stringify(list.slice(0, 30))); } catch (e) {}
+  }
+  function resumeIdentity(v, course) {
+    var vm = v && RJ.parseVimeo(v.url);
+    return vm ? { course: course, id: String(v.id), media: vm.id } : null;
+  }
+  function findResumeVideo(record) {
+    var found = null;
+    state.courses.some(function (c, ci) {
+      if (c.name !== record.course) return false;
+      return c.chapters.some(function (ch) {
+        return ch.videos.some(function (v) {
+          var identity = resumeIdentity(v, c.name);
+          if (v.state !== 'open' || !identity || !sameResume(identity, record)) return false;
+          found = { ci: ci, v: v };
+          return true;
+        });
+      });
+    });
+    return found;
+  }
+  function resumeTime(seconds) {
+    var n = Math.floor(seconds), h = Math.floor(n / 3600), m = Math.floor(n % 3600 / 60), s = n % 60;
+    return (h ? h + '時間' : '') + (m ? m + '分' : '') + (s || (!h && !m) ? s + '秒' : '');
+  }
+  function resumePanel(id, before) {
+    var panel = $(id);
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = id; panel.className = 'resume-card hidden';
+      panel.setAttribute('aria-label', '前回の続き');
+      before.parentNode.insertBefore(panel, before);
+    }
+    return panel;
+  }
+  function paintResume(panel, record, video) {
+    if (!record || !video) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+    panel.classList.remove('hidden');
+    panel.innerHTML = '<h2 class="resume-heading">前回の続き</h2>'
+      + '<p class="resume-course">' + esc(record.course) + '</p>'
+      + '<p class="resume-title">' + esc(video.title || '（無題）') + '</p>'
+      + '<div class="resume-actions"><button class="btn" type="button" data-resume>'
+      + esc(resumeTime(record.seconds)) + 'から再開</button>'
+      + '<button class="btn ghost" type="button" data-restart>はじめから見る</button></div>'
+      + '<p class="resume-note">この端末での再生位置です。</p>'
+      + '<p class="resume-msg" role="status" aria-live="polite"></p>';
+    panel.querySelector('[data-resume]').onclick = function () { resumeFrom(record, false, panel); };
+    panel.querySelector('[data-restart]').onclick = function () { resumeFrom(record, true, panel); };
+  }
+  function renderResumePicker() {
+    var panel = resumePanel('resumePicker', $('pickerList')), records = readResume(resumeStorageKey()), match = null, record = null;
+    records.some(function (r) { match = findResumeVideo(r); if (match) { record = r; return true; } return false; });
+    paintResume(panel, record, match && match.v);
+  }
+  function renderResumeWatch() {
+    var panel = resumePanel('resumeWatch', $('player').parentNode), item = state.flat[state.vi];
+    var c = state.courses[state.ci], record = null;
+    if (item && c && !(resumeSession && resumeSession.played)) {
+      var identity = resumeIdentity(item.v, c.name);
+      if (identity) record = readResume(resumeStorageKey()).filter(function (r) { return sameResume(r, identity); })[0];
+      if (record && !findResumeVideo(record)) record = null;
+    }
+    paintResume(panel, record, item && item.v);
+  }
+  function resumeFrom(record, fromStart, panel) {
+    var key = resumeStorageKey(), view = resumeView, msg = panel.querySelector('.resume-msg');
+    var buttons = panel.querySelectorAll('button');
+    Array.prototype.forEach.call(buttons, function (b) { b.disabled = true; });
+    msg.textContent = '視聴できるか確認しています…';
+    // 控えの一覧だけでは再開しない。最新の権限・期限・動画の同一性を確認する。
+    api('data', { token: store.token(), uid: uid }).then(function (res) {
+      if (view !== resumeView || key !== resumeStorageKey()) return;
+      if (!res || !res.ok) {
+        if (res && (res.error === 'unauthorized' || res.error === 'stopped')) {
+          store.clear(); showLogin(RJ.errMsg(res)); return;
+        }
+        throw new Error('確認できませんでした。通信状態をご確認のうえ、もう一度お試しください。');
+      }
+      applyData(res); saveDataCache(res);
+      var found = findResumeVideo(record);
+      if (!found) { msg.textContent = 'この動画は現在視聴できません。別の動画をお選びください。'; return; }
+      endResumeSession();
+      if (fromStart) writeResume(key, record, true);
+      openCourse(found.ci, { id: record.id, media: record.media, seconds: fromStart ? 0 : record.seconds });
+      closeDrawer();
+      $('vTitle').setAttribute('tabindex', '-1');
+      $('vTitle').focus({ preventScroll: true });
+    }).catch(function (e) {
+      if (view === resumeView && key === resumeStorageKey()) msg.textContent = e.message;
+    }).then(function () {
+      Array.prototype.forEach.call(buttons, function (b) { b.disabled = false; });
+    });
+  }
+  function flushResume() {
+    if (resumeSession && resumeSession.pending) {
+      writeResume(resumeSession.key, resumeSession.pending, false);
+      resumeSession.pending = null; resumeSession.savedAt = Date.now();
+    }
+  }
+  function endResumeSession() {
+    if (!resumeSession) return;
+    flushResume();
+    var session = resumeSession;
+    resumeSession = null;
+    Object.keys(session.handlers).forEach(function (name) {
+      try { session.player.off(name, session.handlers[name]); } catch (e) {}
+    });
+  }
+  function trackResume(v) {
+    var player = state.player, c = state.courses[state.ci], identity = c && resumeIdentity(v, c.name);
+    if (!player || !player.on || !identity || v.state !== 'open') return;
+    var session = {
+      player: player, key: resumeStorageKey(), played: false, finished: false,
+      pending: null, savedAt: 0, handlers: {}
+    };
+    resumeSession = session;
+    function active() { return resumeSession === session; }
+    function position(d, force) {
+      if (!active() || !session.played || session.finished || !d
+        || typeof d.seconds !== 'number' || typeof d.duration !== 'number'
+        || !isFinite(d.seconds) || !isFinite(d.duration) || d.seconds < 0 || d.duration <= 0) return;
+      var record = {
+        course: identity.course, id: identity.id, media: identity.media,
+        seconds: Math.floor(d.seconds), duration: d.duration, at: Date.now()
+      };
+      // 終端付近を再開候補に残さない（「視聴済み」の90%判定とは別）。
+      if (d.duration - d.seconds <= 3) { session.pending = null; writeResume(session.key, record, true); return; }
+      if (!validResume(record)) return;
+      session.pending = record;
+      if (force || Date.now() - session.savedAt >= 5000) flushResume();
+    }
+    session.handlers.play = function () {
+      if (!active()) return;
+      session.played = true; session.finished = false;
+      if ($('resumeWatch')) $('resumeWatch').classList.add('hidden');
+    };
+    session.handlers.timeupdate = function (d) { position(d, false); };
+    session.handlers.pause = function (d) { position(d, true); flushResume(); };
+    session.handlers.seeked = function (d) { position(d, true); };
+    session.handlers.ended = function () {
+      if (!active()) return;
+      session.finished = true; session.pending = null;
+      writeResume(session.key, identity, true);
+    };
+    try {
+      Object.keys(session.handlers).forEach(function (name) { player.on(name, session.handlers[name]); });
+    } catch (e) { endResumeSession(); }
+  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) flushResume(); });
+  window.addEventListener('pagehide', flushResume);
   // ---------- 視聴済み ----------
   // 記録はスプレッドシート（「視聴状況」タブ）が正。端末には画面をすぐ描くための控えを置く。
   // state.watched は「観た動画のID」の集合。
@@ -168,7 +343,7 @@
     var act = ev.target && ev.target.dataset ? ev.target.dataset.act : '';
     if (!act) return;
     $('acctMenu').classList.add('hidden');
-    if (act === 'logout') { store.clear(); location.reload(); return; }
+    if (act === 'logout') { endResumeSession(); store.clear(); location.reload(); return; }
     if (act === 'admin') { location.href = 'admin.html' + (RJ.MOCK ? '?mock=1' : ''); return; }
     if (act === 'newnews') { location.href = 'admin.html?open=news' + (RJ.MOCK ? '&mock=1' : ''); return; }
     if (act === 'newvideo') { location.href = 'admin.html?open=video' + (RJ.MOCK ? '&mock=1' : ''); return; }
@@ -533,6 +708,7 @@
       renderSideChapters();
       if (cur) renderChapList(cur.chapter);
       paintProgress();
+      renderResumeWatch();
     } else if (!$('scPicker').classList.contains('hidden')) {
       showPicker();
     } else {
@@ -542,6 +718,7 @@
   }
 
   function showLogin(message) {
+    endResumeSession(); resumeView++;
     $('scApp').classList.add('hidden');
     $('scLogin').classList.remove('hidden');
     if (message) { $('loginMsg').className = 'msg err'; $('loginMsg').textContent = message; }
@@ -578,6 +755,8 @@
 
   /** 画面の切り替え */
   function show(id) {
+    resumeView++;
+    if (id !== 'scWatch') endResumeSession();
     ['scPicker', 'scWatch', 'scNews', 'scEmpty'].forEach(function (s) {
       $(s).classList.toggle('hidden', s !== id);
     });
@@ -607,6 +786,7 @@
       b.addEventListener('click', function () { openCourse(Number(b.dataset.i)); });
     });
     renderSideCourses();
+    renderResumePicker();
   }
 
   /** 左：コース一覧（選択前） */
@@ -623,7 +803,7 @@
   }
 
   // ---------- コースを開く ----------
-  function openCourse(i) {
+  function openCourse(i, resume) {
     state.ci = i;
     var c = state.courses[i];
     if (!c) return;
@@ -644,7 +824,25 @@
     });
 
     renderSideChapters();
-    // 最初の動画（観られるもの）を自動で開く
+    if (resume) {
+      var target = state.flat.findIndex(function (item) {
+        var vm = RJ.parseVimeo(item.v.url);
+        return item.v.state === 'open' && String(item.v.id) === resume.id && vm && vm.id === resume.media;
+      });
+      if (target >= 0) { openVideo(target, resume.seconds); return; }
+    }
+    // 前回の動画を開くだけにとどめ、再生位置の復元は本人の操作を待つ。
+    var previous = readResume(resumeStorageKey()).filter(function (r) {
+      return r.course === c.name && findResumeVideo(r);
+    })[0];
+    if (previous) {
+      var previousIndex = state.flat.findIndex(function (item) {
+        var vm = RJ.parseVimeo(item.v.url);
+        return String(item.v.id) === previous.id && vm && vm.id === previous.media;
+      });
+      if (previousIndex >= 0) { openVideo(previousIndex); return; }
+    }
+    // 記録がなければ従来どおり、最初の視聴可能な動画を開く。
     var first = state.flat.filter(function (f) { return f.v.url; })[0];
     if (first) openVideo(state.flat.indexOf(first));
     else openVideo(0);
@@ -768,9 +966,10 @@
     return '';
   }
 
-  function openVideo(i) {
+  function openVideo(i, resumeSeconds) {
     var item = state.flat[i];
     if (!item) return;
+    endResumeSession();
     state.vi = i;
     var v = item.v;
     var vm = RJ.parseVimeo(v.url);
@@ -796,7 +995,11 @@
     }
 
     var frame = $('player');
-    frame.src = vm ? vm.embed : 'about:blank';
+    // ユーザーが再開を選んだ場合だけ、Vimeo公式の開始位置パラメーターを付ける。
+    // ブラウザが自動再生を制限しても、再生ボタンからこの位置で始められる。
+    var resumeAt = typeof resumeSeconds === 'number' && isFinite(resumeSeconds) && resumeSeconds >= 5
+      ? Math.floor(resumeSeconds) : 0;
+    frame.src = vm ? vm.embed + (resumeAt ? '&autoplay=1#t=' + resumeAt + 's' : '') : 'about:blank';
     state.player = null;
     if (vm && window.Vimeo && window.Vimeo.Player) {
       try { state.player = new Vimeo.Player(frame); } catch (e) { state.player = null; }
@@ -846,6 +1049,8 @@
 
     // 9割まで観たら自動で「視聴済み」にする（本人が外すこともできる）
     watchAuto(v);
+    trackResume(v);
+    renderResumeWatch();
 
     $('prevBtn').disabled = (i <= 0);
     $('nextBtn').disabled = (i >= state.flat.length - 1);

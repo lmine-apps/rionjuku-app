@@ -1203,3 +1203,26 @@ html.student-page.shooting body.has-demo-bar { --student-demo-offset: 0px; }
 .wbar { height: 4px; border-radius: 99px; background: rgba(18, 52, 90, .12); margin: 3px 0 2px; }
 .wbar i { display: block; height: 100%; border-radius: 99px; background: var(--sky-500); }
 
+
+/* ===== 前回の続き（受講生ページのみ） ===== */
+.student-page .resume-card {
+  margin: 0 0 24px; padding: 20px; border: 1px solid var(--student-border);
+  border-left: 3px solid var(--sky-500); border-radius: 10px; background: var(--student-paper);
+}
+.student-page .resume-heading {
+  margin: 0 0 12px; font-family: var(--serif); font-weight: 600; font-size: 19px;
+  line-height: 1.6; letter-spacing: .04em; color: var(--navy-900);
+}
+.student-page .resume-course { margin: 0 0 4px; font-size: 14px; color: var(--student-muted); }
+.student-page .resume-title { margin: 0 0 16px; font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.7; }
+.student-page .resume-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.student-page .resume-actions .btn { width: auto; min-width: 160px; letter-spacing: .02em; }
+.student-page .resume-note { margin: 12px 0 0; font-size: 14px; color: var(--student-muted); }
+.student-page .resume-msg { margin: 12px 0 0; font-size: 14px; color: var(--navy-800); }
+.student-page .resume-msg:empty { display: none; }
+@media (max-width: 560px) {
+  .student-page .watch .resume-card { margin-left: 16px; margin-right: 16px; }
+  .student-page .resume-card { padding: 16px; }
+  .student-page .resume-actions { gap: 8px; }
+  .student-page .resume-actions .btn { width: 100%; min-width: 0; }
+}
