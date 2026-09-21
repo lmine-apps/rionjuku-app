@@ -11,19 +11,19 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="凛穏塾">
 <meta name="theme-color" content="#07172c">
-<link rel="apple-touch-icon" href="icon-192.png?v=38">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=38">
-<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png?v=38">
-<link rel="icon" href="icon-192.png?v=38">
+<link rel="apple-touch-icon" href="icon-192.png?v=39">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=39">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png?v=39">
+<link rel="icon" href="icon-192.png?v=39">
 <title>凛穏塾｜受講生専用 動画ページ</title>
-<link rel="stylesheet" href="css/style.css?v=38">
+<link rel="stylesheet" href="css/style.css?v=39">
 </head>
 <body>
 
 <!-- ===== 起動画面（白い光にロゴが浮かぶ・1.5秒で消える） ===== -->
 <div id="splash" class="splash">
   <div class="splash__glow"></div>
-  <img class="splash__logo" src="assets/logo-app.png?v=38" alt="凛穏塾" width="480" height="480">
+  <img class="splash__logo" src="assets/logo-app.png?v=39" alt="凛穏塾" width="480" height="480">
 </div>
 <script>
 (function () {
@@ -120,6 +120,12 @@
         <div id="vHint" class="hint-bar hidden"></div>
         <div id="vLimit" class="limit-bar hidden"></div>
         <div class="frame"><iframe id="player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>
+        <div class="seek-tools" id="seekTools">
+          <button id="back10" type="button" aria-label="10秒もどす">
+            <span class="seek-ic">↺</span>10秒</button>
+          <button id="fwd10" type="button" aria-label="10秒すすむ">
+            10秒<span class="seek-ic">↻</span></button>
+        </div>
         <div class="watch-tools">
           <button id="doneBtn" type="button">□ 視聴済みにする</button>
         </div>
@@ -162,9 +168,9 @@
 </div>
 
 <script src="https://player.vimeo.com/api/player.js"></script>
-<script src="js/config.js?v=38"></script>
-<script src="js/common.js?v=38"></script>
-<script src="js/mock.js?v=38"></script>
-<script src="js/app.js?v=38"></script>
+<script src="js/config.js?v=39"></script>
+<script src="js/common.js?v=39"></script>
+<script src="js/mock.js?v=39"></script>
+<script src="js/app.js?v=39"></script>
 </body>
 </html>

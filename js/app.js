@@ -1039,6 +1039,7 @@
     if (vm && window.Vimeo && window.Vimeo.Player) {
       try { state.player = new Vimeo.Player(frame); } catch (e) { state.player = null; }
     }
+    paintSeekTools(!!state.player);
     // ※Vimeo側が「埋め込み限定」設定のため、vimeo.comで開くリンクは置いていない
 
     // 目次・補足
@@ -1092,6 +1093,40 @@
     renderSideChapters();
     window.scrollTo(0, 0);
   }
+
+  /**
+   * 10秒もどす／10秒すすむ
+   * ・Vimeoの再生位置を読み書きする。プレイヤーが無いときはボタンを押せなくする
+   * ・動画の長さを超えないように丸める
+   */
+  function seekBy(sec) {
+    var p = state.player;
+    if (!p || !p.getCurrentTime) return;
+    var btn = sec < 0 ? $('back10') : $('fwd10');
+    if (btn) { btn.classList.add('hit'); setTimeout(function () { btn.classList.remove('hit'); }, 220); }
+    Promise.all([p.getCurrentTime(), p.getDuration()])
+      .then(function (r) {
+        var now = r[0] || 0, dur = r[1] || 0;
+        var to = now + sec;
+        if (to < 0) to = 0;
+        if (dur && to > dur - 0.5) to = Math.max(0, dur - 0.5);
+        return p.setCurrentTime(to);
+      })
+      .catch(function () {});          // 操作できない環境でも黙って何もしない
+  }
+
+  /** 再生できる動画のときだけ、10秒ボタンを押せるようにする */
+  function paintSeekTools(canPlay) {
+    var box = $('seekTools');
+    if (!box) return;
+    box.classList.toggle('hidden', !canPlay);
+    ['back10', 'fwd10'].forEach(function (id) {
+      var b = $(id); if (b) b.disabled = !canPlay;
+    });
+  }
+
+  if ($('back10')) $('back10').addEventListener('click', function () { seekBy(-10); });
+  if ($('fwd10')) $('fwd10').addEventListener('click', function () { seekBy(10); });
 
   /**
    * 9割まで再生されたら、自動で「視聴済み」にする。
