@@ -34,11 +34,12 @@ OUT_W = 640                    # 書き出しの横幅
 
 # 名前 → (撮影用パラメータ, 切り取り位置 top, bottom) ※2倍ピクセルで指定
 SHOTS = [
-    ("login",     "login",     0,   1750),
+    ("login",     "login",     0,   1900),
     ("first",     "first",     380, 1680),
     ("firstpass", "firstpass", 380, 1720),
     ("picker",    "picker",    0,   1040),
     ("menu",      "menu",      0,   1060),
+    ("watch",     "watch",     0,   1500),
 ]
 
 
