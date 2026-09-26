@@ -39,7 +39,7 @@ SHOTS = [
     ("firstpass", "firstpass", 380, 1720),
     ("picker",    "picker",    0,   1040),
     ("menu",      "menu",      0,   1060),
-    ("watch",     "watch",     0,   1500),
+    ("watch",     "watch",     0,   1620),
 ]
 
 

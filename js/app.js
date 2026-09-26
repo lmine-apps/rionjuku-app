@@ -19,6 +19,7 @@
     watched: {}      // 観た動画のID（サーバーの「視聴状況」と同じ中身）
   };
   var WATCH_KEY = 'rj_watched', READ_KEY = 'rj_news_read', LIKE_KEY = 'rj_news_liked', ORDER_KEY = 'rj_order';
+  var RATE_KEY = 'rj_rate';        // 再生速度（この端末だけが覚える）
   var uid = RJ.pickUid();
 
   var $ = function (id) { return document.getElementById(id); };
@@ -1040,6 +1041,8 @@
       try { state.player = new Vimeo.Player(frame); } catch (e) { state.player = null; }
     }
     paintSeekTools(!!state.player);
+    paintRateTools(!!state.player);
+    applyRate();
     // ※Vimeo側が「埋め込み限定」設定のため、vimeo.comで開くリンクは置いていない
 
     // 目次・補足
@@ -1127,6 +1130,66 @@
 
   if ($('back10')) $('back10').addEventListener('click', function () { seekBy(-10); });
   if ($('fwd10')) $('fwd10').addEventListener('click', function () { seekBy(10); });
+
+  /* ---------- 再生速度 ----------
+   * ・0.75 / 1 / 1.25 / 1.5 の4段階。選んだ速度はこの端末が覚えて、次の動画にも引き継ぐ
+   * ・Vimeoは端末や動画の設定によって速度変更を断ることがある。
+   *   そのときは黙って失敗させず、「変えられません」と出して表示を実際の速度に戻す
+   */
+  var RATES = [0.75, 1, 1.25, 1.5];
+  function rate() {
+    var v;
+    try { v = Number(localStorage.getItem(RATE_KEY)); } catch (e) { v = 0; }
+    return RATES.indexOf(v) >= 0 ? v : 1;
+  }
+  function setRate(v) { try { localStorage.setItem(RATE_KEY, String(v)); } catch (e) {} }
+
+  function paintRateTools(canPlay) {
+    var box = $('rateTools');
+    if (!box) return;
+    box.classList.toggle('hidden', !canPlay);
+    var now = rate();
+    Array.prototype.forEach.call(box.querySelectorAll('.rate'), function (b) {
+      b.classList.toggle('on', Number(b.dataset.rate) === now);
+      b.disabled = !canPlay;
+    });
+    if (canPlay) rateMsg(false);
+  }
+  function rateMsg(show) {
+    var m = $('rateMsg'); if (m) m.classList.toggle('hidden', !show);
+  }
+
+  /** いまのプレーヤーに、覚えている速度をあてる（動画を開くたびに呼ぶ） */
+  function applyRate() {
+    var p = state.player;
+    if (!p || !p.setPlaybackRate) return;
+    var want = rate();
+    p.ready()
+      .then(function () { return p.setPlaybackRate(want); })
+      .then(function () { rateMsg(false); })
+      .catch(function () {
+        // 変えられない端末。表示を実際の速度に戻して、理由を出す
+        rateMsg(true);
+        if (p.getPlaybackRate) {
+          p.getPlaybackRate().then(function (r) {
+            var box = $('rateTools'); if (!box) return;
+            Array.prototype.forEach.call(box.querySelectorAll('.rate'), function (b) {
+              b.classList.toggle('on', Number(b.dataset.rate) === Number(r));
+            });
+          }).catch(function () {});
+        }
+      });
+  }
+
+  if ($('rateTools')) {
+    $('rateTools').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('.rate') : null;
+      if (!b || b.disabled) return;
+      setRate(Number(b.dataset.rate));
+      paintRateTools(true);
+      applyRate();
+    });
+  }
 
   /**
    * 9割まで再生されたら、自動で「視聴済み」にする。
