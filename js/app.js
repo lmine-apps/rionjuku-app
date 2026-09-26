@@ -1042,6 +1042,7 @@
     }
     paintSeekTools(!!state.player);
     paintRateTools(!!state.player);
+    paintPipBtn(!!state.player);
     applyRate();
     // ※Vimeo側が「埋め込み限定」設定のため、vimeo.comで開くリンクは置いていない
 
@@ -1180,6 +1181,36 @@
         }
       });
   }
+
+  /* ---------- 小窓（ピクチャ・イン・ピクチャ） ----------
+   * 動画を小窓にすると、ほかのアプリを使っている間も再生が続く（＝ながら聴き）。
+   * ※iPhoneは画面を消すと止まる。これはiOSの仕様で、こちらからは変えられない。
+   * 再生前や対応していない端末では、押しても何も起きないと不安になるので理由を出す。
+   */
+  function pipMsg(text) {
+    var m = $('pipMsg');
+    if (!m) return;
+    m.textContent = text || '';
+    m.classList.toggle('hidden', !text);
+  }
+  function paintPipBtn(canPlay) {
+    var b = $('pipBtn');
+    if (!b) return;
+    b.classList.toggle('hidden', !canPlay);
+    pipMsg('');
+  }
+  function pipGo() {
+    var p = state.player;
+    if (!p || !p.requestPictureInPicture) { pipMsg('この端末では小窓にできません'); return; }
+    p.getPaused()
+      .then(function (paused) {
+        if (paused) { pipMsg('先に動画を再生してから押してください'); return null; }
+        return p.requestPictureInPicture();
+      })
+      .then(function (r) { if (r !== null) pipMsg(''); })
+      .catch(function () { pipMsg('この端末では小窓にできません'); });
+  }
+  if ($('pipBtn')) $('pipBtn').addEventListener('click', pipGo);
 
   if ($('rateTools')) {
     $('rateTools').addEventListener('click', function (e) {
