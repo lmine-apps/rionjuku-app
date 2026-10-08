@@ -11,19 +11,19 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="凛穏塾">
 <meta name="theme-color" content="#07172c">
-<link rel="apple-touch-icon" href="icon-192.png?v=43">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=43">
-<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png?v=43">
-<link rel="icon" href="icon-192.png?v=43">
+<link rel="apple-touch-icon" href="icon-192.png?v=44">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=44">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png?v=44">
+<link rel="icon" href="icon-192.png?v=44">
 <title>凛穏塾｜受講生専用 動画ページ</title>
-<link rel="stylesheet" href="css/style.css?v=43">
+<link rel="stylesheet" href="css/style.css?v=44">
 </head>
 <body>
 
 <!-- ===== 起動画面（白い光にロゴが浮かぶ・1.5秒で消える） ===== -->
 <div id="splash" class="splash">
   <div class="splash__glow"></div>
-  <img class="splash__logo" src="assets/logo-app.png?v=43" alt="凛穏塾" width="480" height="480">
+  <img class="splash__logo" src="assets/logo-app.png?v=44" alt="凛穏塾" width="480" height="480">
 </div>
 <script>
 (function () {
@@ -123,7 +123,13 @@
         <h1 id="vTitle"></h1>
         <div id="vHint" class="hint-bar hidden"></div>
         <div id="vLimit" class="limit-bar hidden"></div>
-        <div class="frame"><iframe id="player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>
+        <div class="frame" id="videoFrame"><iframe id="player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>
+        <div class="audio-card hidden" id="audioCard">
+          <div class="audio-ic">&#127911;</div>
+          <div class="audio-ttl">ボイス講義</div>
+          <audio id="aplayer" controls preload="metadata" playsinline></audio>
+          <p class="audio-note">画面を消しても再生が続きます</p>
+        </div>
         <div class="seek-tools" id="seekTools">
           <button id="back10" type="button" aria-label="10秒もどす">
             <span class="seek-ic">↺</span>10秒</button>
@@ -182,9 +188,9 @@
 </div>
 
 <script src="https://player.vimeo.com/api/player.js"></script>
-<script src="js/config.js?v=43"></script>
-<script src="js/common.js?v=43"></script>
-<script src="js/mock.js?v=43"></script>
-<script src="js/app.js?v=43"></script>
+<script src="js/config.js?v=44"></script>
+<script src="js/common.js?v=44"></script>
+<script src="js/mock.js?v=44"></script>
+<script src="js/app.js?v=44"></script>
 </body>
 </html>

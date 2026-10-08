@@ -923,7 +923,7 @@
           return '<button class="side-lesson' + (idx === state.vi ? ' on' : '') + (locked ? ' locked' : '') + '"'
             + ' data-i="' + idx + '" type="button"' + (locked || !v.url ? ' disabled' : '') + '>'
             + (isWatched(v) ? '<span class="chk">✓</span>' : (locked ? '<span class="chk">🔒</span>' : '<span class="chk"></span>'))
-            + '<span class="ln">' + esc(v.title || '（無題）') + markBadge(v) + lessonLimitBadge(v) + '</span></button>';
+            + '<span class="ln">' + esc(v.title || '（無題）') + voiceBadge(v) + markBadge(v) + lessonLimitBadge(v) + '</span></button>';
         }).join('')
         + '</div></div>';
     }).join('');
@@ -1009,6 +1009,7 @@
     state.vi = i;
     var v = item.v;
     var vm = RJ.parseVimeo(v.url);
+    var am = vm ? null : RJ.parseAudio(v.url);
 
     show('scWatch');
     $('vTitle').innerHTML = esc(v.title || '（無題）') + markBadge(v);
@@ -1031,18 +1032,37 @@
     }
 
     var frame = $('player');
+    var vbox = $('videoFrame'), abox = $('audioCard'), ael = $('aplayer');
     // ユーザーが再開を選んだ場合だけ、Vimeo公式の開始位置パラメーターを付ける。
     // ブラウザが自動再生を制限しても、再生ボタンからこの位置で始められる。
     var resumeAt = typeof resumeSeconds === 'number' && isFinite(resumeSeconds) && resumeSeconds >= 5
       ? Math.floor(resumeSeconds) : 0;
-    frame.src = vm ? vm.embed + (resumeAt ? '&autoplay=1#t=' + resumeAt + 's' : '') : 'about:blank';
-    state.player = null;
-    if (vm && window.Vimeo && window.Vimeo.Player) {
-      try { state.player = new Vimeo.Player(frame); } catch (e) { state.player = null; }
+
+    // 前の回の音声が鳴り続けないよう、切り替える前に必ず止める
+    if (ael) { try { ael.pause(); } catch (e) {} }
+
+    if (am) {
+      // ボイス講義（音声だけの回）
+      if (vbox) vbox.classList.add('hidden');
+      frame.src = 'about:blank';
+      if (abox) abox.classList.remove('hidden');
+      if (ael) {
+        if (ael.getAttribute('src') !== am.src) { ael.src = am.src; try { ael.load(); } catch (e) {} }
+        state.player = audioPlayer(ael);
+      } else { state.player = null; }
+    } else {
+      if (abox) abox.classList.add('hidden');
+      if (ael) { ael.removeAttribute('src'); try { ael.load(); } catch (e) {} }
+      if (vbox) vbox.classList.remove('hidden');
+      frame.src = vm ? vm.embed + (resumeAt ? '&autoplay=1#t=' + resumeAt + 's' : '') : 'about:blank';
+      state.player = null;
+      if (vm && window.Vimeo && window.Vimeo.Player) {
+        try { state.player = new Vimeo.Player(frame); } catch (e) { state.player = null; }
+      }
     }
     paintSeekTools(!!state.player);
     paintRateTools(!!state.player);
-    paintPipBtn(!!state.player);
+    paintPipBtn(!!state.player && !state.player.isAudio);   // 音声に小窓はない
     applyRate();
     // ※Vimeo側が「埋め込み限定」設定のため、vimeo.comで開くリンクは置いていない
 
@@ -1117,6 +1137,52 @@
         return p.setCurrentTime(to);
       })
       .catch(function () {});          // 操作できない環境でも黙って何もしない
+  }
+
+  /* ---------- ボイス講義（音声だけの回） ----------
+   * <audio> を Vimeo のプレーヤーと同じ書き方で扱えるようにする包み。
+   * こうしておくと、10秒ボタン・再生速度・9割で自動チェックが、
+   * 動画のときのコードのまま音声にも効く。
+   */
+  function audioPlayer(el) {
+    function done(v) { return Promise.resolve(v); }
+    var onTime = null;
+    return {
+      isAudio: true,
+      ready: function () { return done(); },
+      play: function () { var r = el.play(); return (r && r.then) ? r : done(); },
+      pause: function () { el.pause(); return done(); },
+      getPaused: function () { return done(!!el.paused); },
+      getCurrentTime: function () { return done(el.currentTime || 0); },
+      getDuration: function () { return done(isFinite(el.duration) ? el.duration : 0); },
+      setCurrentTime: function (t) { try { el.currentTime = t; } catch (e) {} return done(t); },
+      setPlaybackRate: function (r) { el.playbackRate = r; return done(r); },
+      getPlaybackRate: function () { return done(el.playbackRate || 1); },
+      setVolume: function (v) { el.volume = v; return done(v); },
+      on: function (name, cb) {
+        if (name !== 'timeupdate') return;
+        onTime = function () {
+          var d = el.duration;
+          cb({
+            seconds: el.currentTime || 0,
+            duration: (isFinite(d) ? d : 0),
+            percent: (d && isFinite(d) && d > 0) ? ((el.currentTime || 0) / d) : 0
+          });
+        };
+        el.addEventListener('timeupdate', onTime);
+      },
+      off: function (name) {
+        if (name !== 'timeupdate' || !onTime) return;
+        el.removeEventListener('timeupdate', onTime);
+        onTime = null;
+      }
+    };
+  }
+
+  /** 一覧で「これは音声の回です」と分かるようにする */
+  function voiceBadge(v) {
+    return (v && !RJ.parseVimeo(v.url) && RJ.parseAudio(v.url))
+      ? '<span class="voice-tag">♪ ボイス</span>' : '';
   }
 
   /** 再生できる動画のときだけ、10秒ボタンを押せるようにする */
@@ -1282,7 +1348,7 @@
       return '<button class="lesson' + (x.i === state.vi ? ' on' : '') + (locked || !v.url ? ' nolink' : '') + '"'
         + ' data-i="' + x.i + '" type="button"' + (locked || !v.url ? ' disabled' : '') + '>'
         + '<span class="num">' + (locked ? '🔒' : (items.indexOf(x) + 1)) + '</span>'
-        + '<span class="ttl">' + esc(v.title || '（無題）')
+        + '<span class="ttl">' + esc(v.title || '（無題）') + voiceBadge(v)
         + (locked ? '<em>' + esc(lockLabel(v)) + '</em>'
           : (v.daysLeft != null && v.daysLeft <= 14 ? '<em>⏳ ' + esc(RJ.jpDate(v.endAt)) + 'まで（残り' + v.daysLeft + '日）</em>' : ''))
         + '</span>'
@@ -1482,7 +1548,7 @@
 
   // ---------- マニュアル用の画面キャプチャ（デモモードのときだけ動く） ----------
   // 例）index.html?mock=1&shot=first
-  //   login / first / firstpass / picker / menu の5種類。
+  //   login / first / firstpass / picker / menu / watch / voice の7種類。
   //   本番（?mock=1が無いとき）は、この中に一切入らない。
   (function () {
     if (!RJ.MOCK) return;
@@ -1511,7 +1577,7 @@
       return;
     }
 
-    if (what === 'picker' || what === 'menu' || what === 'watch') {
+    if (what === 'picker' || what === 'menu' || what === 'watch' || what === 'voice') {
       wait(function () {
         api('login', { email: 'demo@example.com', password: 'demo' }).then(function (res) {
           if (!res || !res.ok) return;
@@ -1522,6 +1588,17 @@
           if (what === 'watch') wait(function () {
             openCourse(0);
             wait(function () { openVideo(2); }, 400);
+          }, 700);
+          if (what === 'voice') wait(function () {
+            openCourse(0);
+            wait(function () {
+              var i = -1;
+              state.flat.some(function (f, k) {
+                if (!RJ.parseVimeo(f.v.url) && RJ.parseAudio(f.v.url)) { i = k; return true; }
+                return false;
+              });
+              if (i >= 0) openVideo(i);
+            }, 400);
           }, 700);
         });
       });

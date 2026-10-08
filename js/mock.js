@@ -20,6 +20,7 @@
     { row: 2,  course: '凛穏塾2.5期生', chapter: '入学式', title: '入学式', url: 'https://vimeo.com/1134091134', note: '0:00:01　入学式の流れ、運営メンバー紹介\n0:13:44　オリエンテーション\n0:44:15　凛穏塾の心得、学び方', tag: '', hidden: false, start: '', end: '', blocks: BLK_SAMPLE, mark: '更新!!', hint: '' },
     { row: 3,  course: '凛穏塾2.5期生', chapter: 'オンライン講義動画', title: '第1回講義', url: 'https://vimeo.com/1132735832', note: '', tag: '', hidden: false, start: '', end: '' },
     { row: 4,  course: '凛穏塾2.5期生', chapter: 'オンライン講義動画', title: '第2回講義', url: 'https://vimeo.com/1136817063', note: '0:00:01　人生に起こるすべてのお悩み解決方法\n0:02:44　お釈迦様の教え／一切皆苦\n0:14:38　苦しみの乗り越え方', tag: '', hidden: false, start: '', end: d(5), mark: '', hint: '視聴は今月末までです！' },
+    { row: 45, course: '凛穏塾2.5期生', chapter: 'ボイス講義', title: 'みこさんのボイス（音声だけの回）', url: 'assets/demo-voice.wav', note: '', tag: '', hidden: false, start: '', end: '' },
     { row: 5,  course: '凛穏塾2.5期生', chapter: 'オンライン講義動画', title: '第3回講義（公開前の見え方）', url: 'https://vimeo.com/1142023382', note: '', tag: '', hidden: false, start: d(7), end: '' },
     { row: 6,  course: '凛穏塾2.5期生', chapter: 'ゆるカフェ質問会', title: '第１回(2025年12月4日)（期限切れの見え方）', url: 'https://vimeo.com/1143697859', note: '', tag: '', hidden: false, start: '', end: d(-3) },
     { row: 7,  course: '卒業生サロン', chapter: 'サロン限定特別講義', title: '家系学【お盆と供養】2026.8.12', url: 'https://vimeo.com/1217790887', note: '0:07:50　先祖供養\n0:10:31　供養\n0:19:00　三具足', tag: '', hidden: false, start: '', end: '' },

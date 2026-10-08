@@ -166,6 +166,28 @@
     return { id: id, hash: h, embed: 'https://player.vimeo.com/video/' + id + '?' + q.join('&'), page: u };
   }
 
+  /**
+   * 動画ＵＲＬ欄に書かれたものが「音声（ボイス講義）」かどうかを見る。
+   * 次のどれかなら音声として扱う。
+   *   ・[音声] https://…  と頭に書いてある（いちばん確実。迷ったらこれ）
+   *   ・.mp3 / .m4a / .aac / .wav / .ogg で終わる
+   *   ・Googleドライブのファイルのリンク（このアプリで動画はVimeoだけなので、ドライブ＝音声とみなす）
+   */
+  function parseAudio(url) {
+    if (!url) return null;
+    var u = String(url).trim();
+    var tag = u.match(/^(?:\[\s*(?:音声|音源|ボイス|mp3|audio)\s*\]|音声|ボイス)\s*(\S+)\s*$/i);
+    var explicit = false;
+    if (tag) { u = tag[1]; explicit = true; }
+    if (/vimeo\.com\//i.test(u)) return null;
+    var isFile = /\.(mp3|m4a|aac|wav|ogg|oga)(\?|#|$)/i.test(u);
+    var isDrive = /drive\.google\.com\//i.test(u);
+    // 外部URLでなくても、音声ファイル名ならアプリ内のファイルとして許す（デモ用）
+    if (!/^https?:\/\//i.test(u) && !isFile) return null;
+    if (!explicit && !isFile && !isDrive) return null;
+    return { src: fixDriveUrl(u, 'audio'), raw: u };
+  }
+
   /** 「0:13:44　オリエンテーション」の行を目次として切り出す */
   function parseMarks(note) {
     var marks = [], rest = [];
@@ -300,7 +322,7 @@
   }
 
   w.RJ = {
-    api: api, store: store, errMsg: errMsg, parseVimeo: parseVimeo, parseMarks: parseMarks,
+    api: api, store: store, errMsg: errMsg, parseVimeo: parseVimeo, parseAudio: parseAudio, parseMarks: parseMarks,
     esc: esc, linkify: linkify, jpDate: jpDate, pickUid: pickUid, modal: modal,
     parseBlocks: parseBlocks, buildBlocks: buildBlocks, fixDriveUrl: fixDriveUrl, BLOCK_TYPES: BLOCK_TYPES,
     CFG: CFG, MOCK: MOCK
