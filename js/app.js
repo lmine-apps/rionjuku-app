@@ -352,10 +352,67 @@
     if (act === 'pass') editPassword();
     if (act === 'guide') showGuide();
     if (act === 'push') showPush();
+    if (act === 'skin') showSkin();
     if (act === 'copy') copyUrl();
     if (act === 'terms') window.open(RJ.CFG.TERMS_URL, '_blank', 'noopener');
     if (act === 'privacy') window.open(RJ.CFG.PRIVACY_URL, '_blank', 'noopener');
   });
+
+  /* ---------- 配色を変える ----------
+   * 見やすさの好みは人それぞれなので、4つの組み合わせから選べるようにする。
+   * 選んだ色はその端末が覚える（サーバーには送らない）。
+   * 背景・項目・文字色がセットで変わるので、読めない組み合わせにはならない。
+   */
+  var SKIN_KEY = 'rj_skin';
+  var SKINS = [
+    { id: '',      name: '標準',     desc: '濃紺とスカイブルー' },
+    { id: 'soft',  name: 'やわらか', desc: '生成りの紙のような色。白がまぶしい方に' },
+    { id: 'clear', name: 'くっきり', desc: '背景の写真を消して、文字と枠をはっきり' },
+    { id: 'night', name: '夜',       desc: '暗い画面。暗いお部屋で観るときに' }
+  ];
+  function skin() {
+    var v;
+    try { v = localStorage.getItem(SKIN_KEY) || ''; } catch (e) { v = ''; }
+    return /^(soft|clear|night)$/.test(v) ? v : '';
+  }
+  function applySkin(v) {
+    if (v) document.documentElement.setAttribute('data-skin', v);
+    else document.documentElement.removeAttribute('data-skin');
+  }
+  function setSkin(v) {
+    try { if (v) localStorage.setItem(SKIN_KEY, v); else localStorage.removeItem(SKIN_KEY); } catch (e) {}
+    applySkin(v);
+  }
+  applySkin(skin());   // 念のため（index.html の先頭でも当てている）
+  // 確認用の裏口。?mock=1 のときだけ ?skin=soft|clear|night|std で切り替えられる
+  (function () {
+    if (!RJ.MOCK) return;
+    var q = location.search.match(/[?&]skin=(soft|clear|night|std)/);
+    if (q) applySkin(q[1] === 'std' ? '' : q[1]);
+  })();
+
+  function showSkin() {
+    function list() {
+      var now = skin();
+      return '<div class="skin-list">' + SKINS.map(function (k) {
+        return '<button class="skin' + (k.id === now ? ' on' : '') + '" data-skin-pick="' + k.id + '" type="button">'
+          + '<span class="skin-sw sw-' + (k.id || 'std') + '"></span>'
+          + '<span class="skin-t">' + esc(k.name) + '<small>' + esc(k.desc) + '</small></span>'
+          + '<span class="skin-ck">✓</span></button>';
+      }).join('') + '</div>'
+      + '<p class="hint" style="margin-bottom:0">押すとすぐに切り替わります。'
+      + 'この設定はこの端末だけのもので、ほかの方の画面は変わりません。</p>';
+    }
+    var m = RJ.modal('配色を変える', list(), null, { cancelText: '閉じる' });
+    m.host.addEventListener('click', function (ev) {
+      var b = ev.target.closest ? ev.target.closest('[data-skin-pick]') : null;
+      if (!b) return;
+      setSkin(b.dataset.skinPick);
+      Array.prototype.forEach.call(m.host.querySelectorAll('.skin'), function (x) {
+        x.classList.toggle('on', x.dataset.skinPick === skin());
+      });
+    });
+  }
 
   // ---------- パソコンで見る（URLをコピー） ----------
   function copyUrl() {
@@ -1577,7 +1634,7 @@
       return;
     }
 
-    if (what === 'picker' || what === 'menu' || what === 'watch' || what === 'voice') {
+    if (what === 'picker' || what === 'menu' || what === 'watch' || what === 'voice' || what === 'colors') {
       wait(function () {
         api('login', { email: 'demo@example.com', password: 'demo' }).then(function (res) {
           if (!res || !res.ok) return;
@@ -1585,6 +1642,7 @@
           // 撮影中の自動ガイド抑止はSHOOTINGで行う（非表示設定は変更しない）。
           start();
           if (what === 'menu') wait(function () { $('acctBtn').click(); }, 900);
+          if (what === 'colors') wait(function () { showSkin(); }, 900);
           if (what === 'watch') wait(function () {
             openCourse(0);
             wait(function () { openVideo(2); }, 400);
