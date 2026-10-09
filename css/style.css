@@ -1026,14 +1026,14 @@ html.student-page.shooting body.has-demo-bar { --student-demo-offset: 0px; }
   margin: 0 12px 4px; width: calc(100% - 24px); padding: 12px; min-height: 48px;
   display: grid; grid-template-columns: 12px minmax(0, 1fr) auto;
   gap: 6px; font-size: 14px; border-radius: 6px;
-  background: var(--student-surface); color: var(--navy-900); box-shadow: none; letter-spacing: .01em;
+  background: var(--navy-800); color: #fff; box-shadow: none; letter-spacing: .01em;
 }
-.student-page .chap-block .chap-h:hover { background: var(--sky-100); filter: none; }
+.student-page .chap-block .chap-h:hover { background: var(--navy-700); filter: none; }
 .student-page .chap-block .chap-h .chap-name { grid-column: 2; grid-row: 1; }
 .student-page .chap-block .chap-h .lim { grid-column: 2 / 4; grid-row: 2; justify-self: start; margin-left: 0; }
 .student-page .chap-block .chap-h .cnt { grid-column: 3; grid-row: 1; }
-.student-page .chap-block .chap-h .tw { color: var(--navy-700); font-size: 12px; }
-.student-page .chap-block .chap-h .cnt { background: var(--student-paper); color: var(--student-muted); font-size: 13px; }
+.student-page .chap-block .chap-h .tw { color: rgba(255, 255, 255, .85); font-size: 12px; }
+.student-page .chap-block .chap-h .cnt { background: rgba(255, 255, 255, .18); color: #fff; font-size: 13px; }
 .student-page .side-lesson { min-height: 48px; padding: 12px 16px 12px 30px; font-size: 14px; color: var(--text); }
 .student-page .chap-block .side-lesson.on { background: var(--sky-100); box-shadow: inset 3px 0 0 var(--navy-700); }
 .student-page .side-lesson.locked { color: var(--student-muted); }
