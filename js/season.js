@@ -22,16 +22,56 @@
     fuyu:  '静かな季節。内側をあたためる時間に。'
   };
 
-  // ---- 特別な日（text＝ことば／mark＝ミニキャラ／label＝読み上げ用の名前）----
+  /* ---- 特別な日 ----------------------------------------------------------
+     text  … その日のことば
+     mark  … ミニキャラ（絵文字）
+     label … 読み上げ用の名前
+     task  … その日の「ひと手間」。節目の日は行動のきっかけになりやすいので、
+             講義の内容に結びつく小さなお題をひとつだけ出す。
+             ★ここはみこさんの教えに関わるところです。文面は運営の確認を取ってから。
+             task を空にすれば、その日はお題を出しません。
+  ------------------------------------------------------------------------- */
   var FESTIVALS = {
-    newyear:     { text: 'あけましておめでとうございます。本年もよろしくお願いいたします。', mark: '🎍', label: '門松' },
-    setsubun:    { text: '節分。心のうちの鬼も、そっと外へ。',                                 mark: '👹', label: '鬼' },
-    hinamatsuri: { text: 'ひな祭り。やわらかな気持ちで過ごせますように。',                     mark: '🎎', label: 'ひな人形' },
-    kodomo:      { text: 'こどもの日。のびやかな一日になりますように。',                       mark: '🎏', label: 'こいのぼり' },
-    tanabata:    { text: '七夕。願いをひとつ、思い浮かべてみてください。',                     mark: '🎋', label: '笹' },
-    halloween:   { text: '今日はハロウィン。すこし遊び心を。',                                 mark: '🎃', label: 'かぼちゃ' },
-    xmas:        { text: 'メリークリスマス。あたたかい夜になりますように。',                   mark: '🎅', label: 'サンタ' },
-    omisoka:     { text: '大晦日。一年、おつかれさまでした。',                                 mark: '🔔', label: '鐘' }
+    newyear: {
+      text: 'あけましておめでとうございます。本年もよろしくお願いいたします。',
+      mark: '🎍', label: '門松',
+      task: '今年ひとつだけ、続けたい習慣を決めて書き留めてみませんか。'
+    },
+    setsubun: {
+      text: '節分。心のうちの鬼も、そっと外へ。',
+      mark: '👹', label: '鬼',
+      task: '手放したい思い込みをひとつ、紙に書き出してみませんか。'
+    },
+    hinamatsuri: {
+      text: 'ひな祭り。やわらかな気持ちで過ごせますように。',
+      mark: '🎎', label: 'ひな人形',
+      task: 'お母さまから受け取ったものを、ひとつ思い出してみませんか。'
+    },
+    kodomo: {
+      text: 'こどもの日。のびやかな一日になりますように。',
+      mark: '🎏', label: 'こいのぼり',
+      task: '子どもの頃に好きだったことを、ひとつ書き出してみませんか。'
+    },
+    tanabata: {
+      text: '七夕。願いをひとつ、思い浮かべてみてください。',
+      mark: '🎋', label: '笹',
+      task: 'その願いを「誰かのために」の形に言いかえてみませんか。'
+    },
+    halloween: {
+      text: '今日はハロウィン。すこし遊び心を。',
+      mark: '🎃', label: 'かぼちゃ',
+      task: 'いつもはしない選択を、今日ひとつだけしてみませんか。'
+    },
+    xmas: {
+      text: 'メリークリスマス。あたたかい夜になりますように。',
+      mark: '🎅', label: 'サンタ',
+      task: '身近な方に、まだ言えていない「ありがとう」をひとつ。'
+    },
+    omisoka: {
+      text: '大晦日。一年、おつかれさまでした。',
+      mark: '🔔', label: '鐘',
+      task: '今年いちばん心に残った講義を、ひとつ選んでみませんか。'
+    }
   };
 
   var el = document.documentElement;
@@ -98,6 +138,19 @@
     if (h && fest && !h.querySelector('.fes-mark')) {
       var mk = makeMark('title');
       if (mk) h.appendChild(mk);
+    }
+
+    // その日の「ひと手間」（特別な日だけ。普段は出さない）
+    var task = document.getElementById('seasonTask');
+    if (task) {
+      if (fest && fest.task) {
+        task.innerHTML = '<span class="season-task__t"></span><span class="season-task__b"></span>';
+        task.querySelector('.season-task__t').textContent = '今日のひと手間';
+        task.querySelector('.season-task__b').textContent = fest.task;
+        task.classList.remove('hidden');
+      } else {
+        task.classList.add('hidden');
+      }
     }
 
     // コース選択の上の、季節のひとこと

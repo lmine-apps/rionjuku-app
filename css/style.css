@@ -1725,3 +1725,23 @@ html[data-season="natsu"] .fall i { filter: blur(.4px); }
 @media (prefers-reduced-motion: reduce) {
   .fes-mark.hop, #fesMark:not(.hidden) { animation: none; }
 }
+
+/* ===== その日の「ひと手間」（特別な日だけ出る小さなお題） ===== */
+.season-task {
+  position: relative; z-index: 2;
+  display: grid; gap: 4px;
+  margin: 0 0 20px; padding: 13px 16px;
+  background: var(--surface); border: 1px solid var(--student-hairline);
+  border-left: 4px solid var(--sky-500); border-radius: 10px;
+  box-shadow: var(--student-card-shadow);
+}
+.season-task__t {
+  font-size: 11.5px; font-weight: 700; letter-spacing: .14em; color: var(--sky-500);
+}
+.season-task__b {
+  font-family: var(--serif); font-size: 15px; line-height: 1.8; color: var(--ink-strong);
+}
+@media (max-width: 560px) {
+  .season-task { padding: 12px 14px; margin-bottom: 18px; }
+  .season-task__b { font-size: 14.5px; }
+}
