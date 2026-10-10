@@ -23,7 +23,8 @@
   };
 
   /* ---- 特別な日 ----------------------------------------------------------
-     text  … その日のことば
+     text  … その日のことば。空にすると、その日も季節のことばのまま
+             （ミニキャラだけ出したい日に使う）
      mark  … ミニキャラ（絵文字）
      label … 読み上げ用の名前
      task  … その日のアウトプットのお題。節目の日は行動のきっかけになりやすいので、
@@ -58,9 +59,9 @@
       task: 'その願いを「誰かのために」の形に言いかえて、アウトプットしてみませんか。'
     },
     halloween: {
-      text: '今日はハロウィン。すこし遊び心を。',
+      text: '',   // 空にすると、その日は季節のことばのまま
       mark: '🎃', label: 'かぼちゃ',
-      task: 'いつもはしない選択を今日ひとつだけ。やってみた結果をアウトプットしてみませんか。'
+      task: ''    // 空にすると、その日はお題を出さない
     },
     xmas: {
       text: 'メリークリスマス。あたたかい夜になりますように。',
@@ -156,7 +157,7 @@
     // コース選択の上の、季節のひとこと
     var box = document.getElementById('seasonGreet');
     if (!box) return;
-    var text = fest ? fest.text : (SEASONS[now.key] || '');
+    var text = (fest && fest.text) ? fest.text : (SEASONS[now.key] || '');
     if (!text) { box.classList.add('hidden'); return; }
     box.textContent = text;
     box.classList.remove('hidden');
