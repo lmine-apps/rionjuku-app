@@ -1726,7 +1726,7 @@ html[data-season="natsu"] .fall i { filter: blur(.4px); }
   .fes-mark.hop, #fesMark:not(.hidden) { animation: none; }
 }
 
-/* ===== その日の「ひと手間」（特別な日だけ出る小さなお題） ===== */
+/* ===== その日のアウトプットのお題（特別な日だけ出る） ===== */
 .season-task {
   position: relative; z-index: 2;
   display: grid; gap: 4px;
