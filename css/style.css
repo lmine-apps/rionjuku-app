@@ -1568,3 +1568,131 @@ html[data-skin="night"] .mark:hover { background: rgba(29, 58, 85, .6); }
 .sw-soft  { background: linear-gradient(135deg, #12345a 0 42%, #fbf7f0 42% 72%, #cfc4b2 72%); }
 .sw-clear { background: linear-gradient(135deg, #06121f 0 42%, #ffffff 42% 72%, #8ca6ba 72%); }
 .sw-night { background: linear-gradient(135deg, #e6eef6 0 42%, #0d2134 42% 72%, #33556f 72%); }
+
+/* =========================================================
+   季節の演出
+   ・背景の濃紺はそのまま。変えるのは「光の色」と「舞うもの」だけ。
+   ・舞うものは形を mask で抜いて色を乗せている（1つの形を色違いで使える）。
+   ・動きが苦手な方の設定（prefers-reduced-motion）では、舞うものを出さない。
+========================================================= */
+:root {
+  --season-glow-1: rgba(255, 255, 255, .98);
+  --season-glow-mid: rgba(255, 255, 255, .72);
+  --season-glow-2: rgba(232, 245, 255, .38);
+  --season-glow-3: rgba(205, 233, 252, .16);
+  --fall-a: #cfe3f3;
+  --fall-b: #e8f3fb;
+  --fall-c: #bcd8ee;
+  --fall-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='34'/%3E%3C/svg%3E");
+}
+
+/* 春：桜の花びら。光はほのかに桜色 */
+html[data-season="haru"] {
+  --season-glow-mid: rgba(255, 244, 248, .74);
+  --season-glow-2: rgba(255, 234, 242, .42);
+  --season-glow-3: rgba(250, 214, 228, .18);
+  --fall-a: #f4c3d4;
+  --fall-b: #fadfe8;
+  --fall-c: #eaa9c0;
+  --fall-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 6c16 18 22 36 22 50 0 20-10 32-22 38-12-6-22-18-22-38 0-14 6-32 22-50z'/%3E%3C/svg%3E");
+}
+
+/* 夏：涼しげな光の粒。光は水色寄り */
+html[data-season="natsu"] {
+  --season-glow-mid: rgba(240, 251, 255, .74);
+  --season-glow-2: rgba(222, 246, 255, .42);
+  --season-glow-3: rgba(186, 228, 248, .18);
+  --fall-a: #bfe6f6;
+  --fall-b: #e6f7ff;
+  --fall-c: #96d3ee;
+}
+
+/* 秋：紅葉。光はあたたかい琥珀 */
+html[data-season="aki"] {
+  --season-glow-mid: rgba(255, 246, 230, .76);
+  --season-glow-2: rgba(255, 240, 219, .44);
+  --season-glow-3: rgba(244, 206, 150, .2);
+  --fall-a: #c8652c;
+  --fall-b: #d99a3e;
+  --fall-c: #a63f29;
+  --fall-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 4C74 28 74 72 50 96 26 72 26 28 50 4z'/%3E%3C/svg%3E");
+}
+
+/* 冬：雪。光は青白く澄んだ色 */
+html[data-season="fuyu"] {
+  --season-glow-mid: rgba(245, 250, 255, .74);
+  --season-glow-2: rgba(234, 244, 255, .42);
+  --season-glow-3: rgba(206, 228, 250, .2);
+  --fall-a: #ffffff;
+  --fall-b: #eaf4ff;
+  --fall-c: #cfe3f8;
+}
+
+/* 起動画面の光に、季節の色をあてる */
+.splash__glow {
+  background: radial-gradient(circle,
+    var(--season-glow-1) 0%, rgba(255,255,255,.95) 12%, var(--season-glow-mid) 26%,
+    var(--season-glow-2) 44%, var(--season-glow-3) 62%, rgba(255,255,255,0) 80%) !important;
+}
+
+/* ---- 舞うもの ---- */
+.fall { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.fall i {
+  position: absolute; top: -8%; display: block;
+  width: calc(var(--fs, 13px) * var(--fscale, 1)); height: calc(var(--fs, 13px) * var(--fscale, 1)); opacity: 0;
+  background-color: var(--fall-a);
+  -webkit-mask: var(--fall-shape) center / contain no-repeat;
+  mask: var(--fall-shape) center / contain no-repeat;
+  animation: fallDown linear infinite;
+}
+.fall i:nth-child(3n+2) { background-color: var(--fall-b); }
+.fall i:nth-child(3n+3) { background-color: var(--fall-c); }
+
+@keyframes fallDown {
+  0%   { opacity: 0; transform: translate3d(0, 0, 0) rotate(0deg); }
+  12%  { opacity: .85; }
+  88%  { opacity: .85; }
+  100% { opacity: 0; transform: translate3d(26px, 118vh, 0) rotate(420deg); }
+}
+
+.fall i:nth-child(1)  { left:  6%; --fs: 11px; animation-duration: 10s; animation-delay: -1s; }
+.fall i:nth-child(2)  { left: 17%; --fs: 15px; animation-duration: 13s; animation-delay: -5s; }
+.fall i:nth-child(3)  { left: 29%; --fs: 9px; animation-duration:  9s; animation-delay: -3s; }
+.fall i:nth-child(4)  { left: 38%; --fs: 14px; animation-duration: 15s; animation-delay: -8s; }
+.fall i:nth-child(5)  { left: 49%; --fs: 10px; animation-duration: 11s; animation-delay: -2s; }
+.fall i:nth-child(6)  { left: 58%; --fs: 16px; animation-duration: 14s; animation-delay: -6s; }
+.fall i:nth-child(7)  { left: 68%; --fs: 11px; animation-duration: 10s; animation-delay: -9s; }
+.fall i:nth-child(8)  { left: 77%; --fs: 13px; animation-duration: 12s; animation-delay: -4s; }
+.fall i:nth-child(9)  { left: 86%; --fs: 9px; animation-duration:  9s; animation-delay: -7s; }
+.fall i:nth-child(10) { left: 93%; --fs: 14px; animation-duration: 16s; animation-delay: -11s; }
+
+/* 起動画面：1.5秒しか出ないので、少し速く・はっきり */
+.fall--splash { --fscale: 1.7; }
+.fall--splash i { animation-duration: 7s !important; }
+
+/* コース選択：画面の邪魔をしないよう、ゆっくり・うすく・少なめ */
+.fall--page { position: fixed; z-index: 1; }
+.fall--page i { opacity: 0; animation-duration: 22s !important; }
+.fall--page i:nth-child(odd)  { animation-duration: 26s !important; }
+@keyframes fallDownSoft {
+  0%   { opacity: 0; transform: translate3d(0, 0, 0) rotate(0deg); }
+  14%  { opacity: .34; }
+  86%  { opacity: .34; }
+  100% { opacity: 0; transform: translate3d(34px, 118vh, 0) rotate(300deg); }
+}
+.fall--page i { animation-name: fallDownSoft; }
+
+/* 夏は「ひらひら」ではなく「ふわっと浮かぶ光」なので、回さずに静かに落とす */
+html[data-season="natsu"] .fall i { filter: blur(.4px); }
+
+/* コース選択に添える、季節のひとこと */
+.season-greet {
+  position: relative; z-index: 2;
+  font-family: var(--serif); font-size: 14.5px; letter-spacing: .06em;
+  color: var(--text); margin: 0 0 6px;
+}
+.student-page .season-greet { font-size: 15px; margin-bottom: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fall { display: none; }
+}
