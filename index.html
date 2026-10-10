@@ -11,12 +11,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="凛穏塾">
 <meta name="theme-color" content="#07172c">
-<link rel="apple-touch-icon" href="icon-192.png?v=48">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=48">
-<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png?v=48">
-<link rel="icon" href="icon-192.png?v=48">
+<link rel="apple-touch-icon" href="icon-192.png?v=49">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=49">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png?v=49">
+<link rel="icon" href="icon-192.png?v=49">
 <title>凛穏塾｜受講生専用 動画ページ</title>
-<link rel="stylesheet" href="css/style.css?v=48">
+<link rel="stylesheet" href="css/style.css?v=49">
 <script>
   /* 選ばれている配色を、画面が描かれる前にあてる（切り替わるちらつきを防ぐ） */
   try {
@@ -37,7 +37,11 @@
       var fes = '';
       if (m === 1 && day <= 3) fes = 'newyear';
       else if (m === 2 && day === 3) fes = 'setsubun';
+      else if (m === 3 && day === 3) fes = 'hinamatsuri';
+      else if (m === 5 && day === 5) fes = 'kodomo';
       else if (m === 7 && day === 7) fes = 'tanabata';
+      else if (m === 10 && day === 31) fes = 'halloween';
+      else if (m === 12 && (day === 24 || day === 25)) fes = 'xmas';
       else if (m === 12 && day === 31) fes = 'omisoka';
       window.RJ_SEASON = { key: key, fes: fes };
       var h = document.documentElement;
@@ -53,7 +57,7 @@
 <div id="splash" class="splash">
   <div class="splash__glow"></div>
   <div class="fall fall--splash" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-  <img class="splash__logo" src="assets/logo-app.png?v=48" alt="凛穏塾" width="480" height="480">
+  <img class="splash__logo" src="assets/logo-app.png?v=49" alt="凛穏塾" width="480" height="480">
 </div>
 <script>
 (function () {
@@ -104,7 +108,7 @@
 <!-- ===== 本体 ===== -->
 <div id="scApp" class="hidden">
   <header class="hd">
-    <div class="brand">凛穏塾<small>ONLINE STUDY</small></div>
+    <div class="brand">凛穏塾<span id="fesMark" class="fes-mark hidden" role="img"></span><small>ONLINE STUDY</small></div>
     <div class="sp"></div>
     <button id="newsBtn" class="hd-icon" type="button">お知らせ<span id="newsBadge" class="badge hidden">0</span></button>
     <div class="acct">
@@ -221,10 +225,10 @@
 </div>
 
 <script src="https://player.vimeo.com/api/player.js"></script>
-<script src="js/config.js?v=48"></script>
-<script src="js/common.js?v=48"></script>
-<script src="js/season.js?v=48"></script>
-<script src="js/mock.js?v=48"></script>
-<script src="js/app.js?v=48"></script>
+<script src="js/config.js?v=49"></script>
+<script src="js/common.js?v=49"></script>
+<script src="js/season.js?v=49"></script>
+<script src="js/mock.js?v=49"></script>
+<script src="js/app.js?v=49"></script>
 </body>
 </html>
