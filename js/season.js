@@ -70,6 +70,7 @@
       m.classList.add('hop');
     });
     if (where === 'head') m.classList.add('fes-mark--head');
+    if (where === 'title') m.classList.add('fes-mark--title');
     return m;
   }
 
@@ -92,14 +93,19 @@
       }
     }
 
+    // 「コースを選んでください」の語尾に、その日のミニキャラを添える
+    var h = document.querySelector('#scPicker h1');
+    if (h && fest && !h.querySelector('.fes-mark')) {
+      var mk = makeMark('title');
+      if (mk) h.appendChild(mk);
+    }
+
     // コース選択の上の、季節のひとこと
     var box = document.getElementById('seasonGreet');
     if (!box) return;
     var text = fest ? fest.text : (SEASONS[now.key] || '');
     if (!text) { box.classList.add('hidden'); return; }
     box.textContent = text;
-    var mk = makeMark('greet');
-    if (mk) box.appendChild(mk);
     box.classList.remove('hidden');
   }
 
