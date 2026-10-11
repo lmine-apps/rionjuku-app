@@ -354,6 +354,7 @@
     if (act === 'push') showPush();
     if (act === 'skin') showSkin();
     if (act === 'copy') copyUrl();
+    if (act === 'update') updateApp();
     if (act === 'terms') window.open(RJ.CFG.TERMS_URL, '_blank', 'noopener');
     if (act === 'privacy') window.open(RJ.CFG.PRIVACY_URL, '_blank', 'noopener');
   });
@@ -412,6 +413,46 @@
         x.classList.toggle('on', x.dataset.skinPick === skin());
       });
     });
+  }
+
+  /* ---------- 最新の状態に更新 ----------
+   * 新しい動画やお知らせが出てこない、というときの逃げ道。
+   * 端末に控えてある一覧を捨てて、読み込み直す。
+   * ★ログイン情報（トークン）・視聴済み・配色・再生速度は消さない。
+   *   消すとログアウトしてしまい、かえって困らせるため。
+   * ★通知のサービスワーカーにも触れない。通知が止まってしまうため。
+   */
+  function updateApp() {
+    var body = '<p style="margin-top:0;font-size:14px">'
+      + '新しい動画やお知らせが出てこないときに使ってください。<br>'
+      + '画面を読み込み直して、最新の状態にします。</p>'
+      + '<p style="font-size:13px;margin-bottom:0;color:var(--text-mid)">'
+      + 'ログインしたままですので、パスワードの入力は要りません。<br>'
+      + '視聴済みのチェックや配色の設定も、そのまま残ります。</p>';
+
+    RJ.modal('最新の状態に更新', body, function () {
+      // 端末に控えてある一覧だけを捨てる
+      try {
+        for (var i = localStorage.length - 1; i >= 0; i--) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf(DATA_KEY) === 0) localStorage.removeItem(k);
+        }
+      } catch (e) {}
+
+      function go() {
+        // 同じURLだと古い画面が使い回されることがあるので、毎回ちがうURLにして開き直す
+        location.replace(location.origin + location.pathname
+          + (RJ.MOCK ? '?mock=1&r=' : '?r=') + Date.now());
+      }
+      if (window.caches && caches.keys) {
+        return caches.keys()
+          .then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })
+          .catch(function () {})
+          .then(go);
+      }
+      go();
+      return new Promise(function () {});   // 画面が切り替わるまで待たせる
+    }, { saveText: '更新する', cancelText: '閉じる' });
   }
 
   // ---------- パソコンで見る（URLをコピー） ----------
