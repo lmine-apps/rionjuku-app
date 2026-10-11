@@ -1322,16 +1322,52 @@
     b.classList.toggle('hidden', !canPlay);
     pipMsg('');
   }
+  /* どんな入れ物で開いているかを見る。
+     小窓にできない原因のほとんどは端末ではなく「開き方」なので、
+     理由と次の一手まで出せるようにしておく。 */
+  function viewEnv() {
+    var ua = navigator.userAgent || '';
+    var standalone = (window.navigator.standalone === true)
+      || !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    return {
+      line: /\bLine\//i.test(ua),                        // LINEの中のブラウザ
+      inApp: /FBAN|FBAV|Instagram|Twitter|MicroMessenger/i.test(ua),
+      ios: /iPhone|iPad|iPod/.test(ua),
+      standalone: standalone
+    };
+  }
+
+  /** 小窓にできなかったとき、何をすればよいかを伝える */
+  function pipWhy() {
+    var e = viewEnv();
+    if (e.line) {
+      return 'LINEの中で開いているため小窓にできません。'
+        + '右下の「…」などから' + (e.ios ? '「Safariで開く」' : '「Chromeで開く」') + 'を選んでお試しください。';
+    }
+    if (e.inApp) {
+      return 'アプリの中のブラウザでは小窓にできません。'
+        + (e.ios ? 'Safari' : 'Chrome') + 'で開いてからお試しください。';
+    }
+    if (e.ios && e.standalone) {
+      return 'ホーム画面から開いたときは小窓にできないことがあります。Safariで開いてお試しください。';
+    }
+    return 'この端末では小窓にできません。';
+  }
+
   function pipGo() {
     var p = state.player;
-    if (!p || !p.requestPictureInPicture) { pipMsg('この端末では小窓にできません'); return; }
+    if (!p || !p.requestPictureInPicture) { pipMsg(pipWhy()); return; }
+    var settled = false;
+    // 押しても無反応のまま終わる端末があるので、少し待って答えがなければ理由を出す
+    var timer = setTimeout(function () { if (!settled) pipMsg(pipWhy()); }, 2500);
+    function done(msg) { settled = true; clearTimeout(timer); pipMsg(msg); }
     p.getPaused()
       .then(function (paused) {
-        if (paused) { pipMsg('先に動画を再生してから押してください'); return null; }
+        if (paused) { done('先に動画を再生してから押してください'); return null; }
         return p.requestPictureInPicture();
       })
-      .then(function (r) { if (r !== null) pipMsg(''); })
-      .catch(function () { pipMsg('この端末では小窓にできません'); });
+      .then(function (r) { if (r !== null) done(''); })
+      .catch(function () { done(pipWhy()); });
   }
   if ($('pipBtn')) $('pipBtn').addEventListener('click', pipGo);
 
