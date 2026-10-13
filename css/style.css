@@ -1751,8 +1751,14 @@ html[data-season="natsu"] .fall i { filter: blur(.4px); }
 
 /* オススメのお知らせに出す、動画のタイトル */
 .pop-mark {
-  margin: 10px 0 2px; padding: 12px 14px;
+  display: grid; gap: 3px; margin: 10px 0 2px; padding: 12px 14px;
   background: var(--student-surface); border-radius: 9px;
+}
+/* どのコースのものか、ひと目で分かるように上に小さく出す */
+.pop-mark__c {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--text-mid);
+}
+.pop-mark__t {
   font-family: var(--serif); font-size: 15.5px; color: var(--ink-strong); line-height: 1.7;
 }
 

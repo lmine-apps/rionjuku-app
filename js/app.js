@@ -1660,7 +1660,7 @@
     state.courses.forEach(function (c, ci) {
       c.chapters.forEach(function (ch) {
         ch.videos.forEach(function (v) {
-          if (v.mark && v.state === 'open' && v.url) out.push({ ci: ci, v: v });
+          if (v.mark && v.state === 'open' && v.url) out.push({ ci: ci, cname: c.name, v: v });
         });
       });
     });
@@ -1674,8 +1674,10 @@
     var rest = fresh.length - 1;
     RJ.modal('オススメコンテンツ',
       '<p style="margin-top:0;font-size:14px">新しいコンテンツがアップされています。</p>'
-      + '<div class="pop-mark">' + esc(first.v.title || '（無題）')
-      + (first.v.mark ? '<span class="mk">' + esc(first.v.mark) + '</span>' : '') + '</div>'
+      + '<div class="pop-mark">'
+      + '<span class="pop-mark__c">' + esc(first.cname || '') + '</span>'
+      + '<span class="pop-mark__t">' + esc(first.v.title || '（無題）')
+      + (first.v.mark ? '<span class="mk">' + esc(first.v.mark) + '</span>' : '') + '</span></div>'
       + (rest > 0 ? '<p class="hint" style="margin-bottom:0">ほかにも ' + rest + ' 件あります。</p>' : ''),
       function (close) {
         close();
