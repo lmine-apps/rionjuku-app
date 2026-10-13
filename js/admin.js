@@ -32,6 +32,30 @@
     location.href = 'index.html' + (RJ.MOCK ? '?mock=1' : '');
   });
   $('reloadBtn').addEventListener('click', function () { load(); });
+  /* 「再読込」はスプシから読み直すだけ。こちらは画面そのものを最新にする。
+     動画を足したのに出てこない、表示が古いまま、というときの逃げ道。
+     ログイン情報は消さないので、入り直しは不要。 */
+  if ($('freshBtn')) $('freshBtn').addEventListener('click', function () {
+    RJ.modal('最新の状態に更新',
+      '<p style="margin-top:0;font-size:14px">画面を読み込み直して、最新の状態にします。</p>'
+      + '<p style="font-size:13px;margin-bottom:0;color:var(--text-mid)">'
+      + 'ログインしたままですので、入り直しは要りません。</p>',
+      function () {
+        function go() {
+          location.replace(location.origin + location.pathname
+            + (RJ.MOCK ? '?mock=1&r=' : '?r=') + Date.now());
+        }
+        if (window.caches && caches.keys) {
+          return caches.keys()
+            .then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })
+            .catch(function () {})
+            .then(go);
+        }
+        go();
+        return new Promise(function () {});
+      },
+      { saveText: '更新する', cancelText: '閉じる' });
+  });
 
   function showLogin(message) {
     $('scApp').classList.add('hidden');

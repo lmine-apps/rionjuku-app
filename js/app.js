@@ -647,7 +647,7 @@
   function scheduleGuide() {
     if (SHOOTING || guideStartupShown) return;
     guideStartupShown = true;
-    if (guideSeen()) { popupNews(); return; }
+    if (guideSeen()) { if (!popupNews()) popupMarked(); return; }
     guideTimer = setTimeout(function () {
       guideTimer = null;
       if (!$('scApp').classList.contains('hidden') && !document.querySelector('.modal')) showGuide(0, true);
@@ -1008,10 +1008,13 @@
       var vids = ch.videos.slice();
       if (order() === 'new') vids.reverse();
       var open = state.openChaps[ch.name] !== false;
-      return '<div class="chap-block ' + chapColor(ch.name) + '">'
-        + '<button class="chap-h' + (open ? ' open' : '') + '" data-ch="' + esc(ch.name) + '" type="button">'
+      // この章に「目印」つきの動画があるか。あれば章の帯にも印を出して、ここだと分かるようにする
+      var mk = '';
+      ch.videos.some(function (v) { if (v.mark && v.state === 'open') { mk = v.mark; return true; } return false; });
+      return '<div class="chap-block ' + chapColor(ch.name) + (mk ? ' has-mark' : '') + '">'
+        + '<button class="chap-h' + (open ? ' open' : '') + (mk ? ' has-mark' : '') + '" data-ch="' + esc(ch.name) + '" type="button">'
         + '<span class="tw">' + (open ? '▾' : '▸') + '</span>'
-        + '<span class="chap-name">' + esc(ch.name) + '</span>'
+        + '<span class="chap-name">' + esc(ch.name) + (mk ? '<span class="mk mk--chap">' + esc(mk) + '</span>' : '') + '</span>'
         + chapLimitBadge(ch)
         + '<span class="cnt">' + vids.length + '</span></button>'
         + '<div class="chap-items"' + (open ? '' : ' style="display:none"') + '>'
@@ -1206,6 +1209,7 @@
     };
 
     // 9割まで観たら自動で「視聴済み」にする（本人が外すこともできる）
+    if (v.mark) addMarkSeen([v.id]);   // 一度開いたら、その動画のお知らせは出さない
     watchAuto(v);
     trackResume(v);
     renderResumeWatch();
@@ -1599,7 +1603,7 @@
   function popupNews() {
     var read = ls(READ_KEY);
     var target = state.news.filter(function (n) { return n.pop && n.published !== false && !read[n.id]; })[0];
-    if (!target) return;
+    if (!target) return false;
     var body = String(target.body || '');
     var short = body.length > 160 ? body.slice(0, 160) + '…' : body;
     RJ.modal(target.title,
@@ -1608,6 +1612,63 @@
       + '<div class="news-body">' + RJ.linkify(short) + '</div>',
       function (close) { close(); showNews(target.id); },
       { saveText: 'お知らせを見る', cancelText: 'あとで' });
+    return true;
+  }
+
+  /* ---------- 目印のついた動画のお知らせ ----------
+   * スプシのF列（目印）に文字を入れた動画を「オススメ」として、入ったときに一度だけ案内する。
+   * ・一度でもその動画を開いたら、以後その動画では出さない
+   * ・新しく目印が付いた動画が増えたら、また出る
+   * ・「あとで」を押したときは消さない（次に入ったときにまた声をかける）
+   */
+  var MARK_KEY = 'rj_mark_seen';
+  function markSeenKey() {
+    return MARK_KEY + ':' + (RJ.MOCK ? 'demo:' : 'live:')
+      + String(state.user && state.user.email || '').trim().toLowerCase();
+  }
+  function markSeen() {
+    try { return (localStorage.getItem(markSeenKey()) || '').split(',').filter(Boolean); }
+    catch (e) { return []; }
+  }
+  function addMarkSeen(ids) {
+    try {
+      var all = markSeen();
+      ids.forEach(function (id) { if (all.indexOf(String(id)) < 0) all.push(String(id)); });
+      localStorage.setItem(markSeenKey(), all.join(','));
+    } catch (e) {}
+  }
+  /** いま観られる「目印つき」の動画を、コースの並び順に集める */
+  function markedVideos() {
+    var out = [];
+    state.courses.forEach(function (c, ci) {
+      c.chapters.forEach(function (ch) {
+        ch.videos.forEach(function (v) {
+          if (v.mark && v.state === 'open' && v.url) out.push({ ci: ci, v: v });
+        });
+      });
+    });
+    return out;
+  }
+  function popupMarked() {
+    var seen = markSeen();
+    var fresh = markedVideos().filter(function (x) { return seen.indexOf(String(x.v.id)) < 0; });
+    if (!fresh.length) return false;
+    var first = fresh[0];
+    var rest = fresh.length - 1;
+    RJ.modal('オススメコンテンツ',
+      '<p style="margin-top:0;font-size:14px">新しいコンテンツがアップされています。</p>'
+      + '<div class="pop-mark">' + esc(first.v.title || '（無題）')
+      + (first.v.mark ? '<span class="mk">' + esc(first.v.mark) + '</span>' : '') + '</div>'
+      + (rest > 0 ? '<p class="hint" style="margin-bottom:0">ほかにも ' + rest + ' 件あります。</p>' : ''),
+      function (close) {
+        close();
+        addMarkSeen(fresh.map(function (x) { return x.v.id; }));
+        openCourse(first.ci);
+        var i = state.flat.findIndex(function (f) { return f.v.id === first.v.id; });
+        if (i >= 0) openVideo(i);
+      },
+      { saveText: '開く', cancelText: 'あとで' });
+    return true;
   }
 
   // ---------- 演出 ----------
