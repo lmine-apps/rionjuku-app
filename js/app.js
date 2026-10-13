@@ -10,6 +10,7 @@
   var api = RJ.api, store = RJ.store, esc = RJ.esc;
 
   var state = {
+    watchCounts: {},
     user: null, courses: [], news: [], myReplies: {},
     ci: -1,          // 選択中のコース
     flat: [],        // 表示順に並べたレッスン
@@ -793,6 +794,7 @@
     state.user = res.user;
     state.courses = res.courses || [];
     state.news = res.news || [];
+    state.watchCounts = res.watchCounts || {};
     state.myReplies = res.myReplies || {};
     if (res.watched) {
       state.watched = {};
@@ -1209,6 +1211,7 @@
     };
 
     // 9割まで観たら自動で「視聴済み」にする（本人が外すこともできる）
+    paintWatchers(v);
     if (v.mark) addMarkSeen([v.id]);   // 一度開いたら、その動画のお知らせは出さない
     watchAuto(v);
     trackResume(v);
@@ -1285,6 +1288,20 @@
   function voiceBadge(v) {
     return (v && !RJ.parseVimeo(v.url) && RJ.parseAudio(v.url))
       ? '<span class="voice-tag">♪ ボイス</span>' : '';
+  }
+
+  /* ---------- 「○名の方が視聴済み」 ----------
+   * ほかの方も観ている、と分かると見てみようという気持ちになりやすい。
+   * ただし人数が少ないうちは出さない（サーバー側で3名未満は渡していない）。
+   * 自分が何人目かは出さない。誰が観たかも渡していない。
+   */
+  function paintWatchers(v) {
+    var box = $('vWatchers');
+    if (!box) return;
+    var n = v && state.watchCounts ? Number(state.watchCounts[v.id] || 0) : 0;
+    if (!n) { box.classList.add('hidden'); box.textContent = ''; return; }
+    box.textContent = n + '名の方が視聴済み';
+    box.classList.remove('hidden');
   }
 
   /** 再生できる動画のときだけ、10秒ボタンを押せるようにする */

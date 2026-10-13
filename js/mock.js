@@ -182,6 +182,8 @@
           resolve({
             ok: true, user: me, courses: buildCourses(me), news: newsFor(me),
             watched: Object.keys(WATCHED).map(Number),
+            // デモ用の「○名の方が視聴済み」。本番はGASが数えて返す（3名未満は渡さない）
+            watchCounts: { 2: 23, 3: 11, 4: 7, 45: 5 },
             myReplies: me.email === 'demo@example.com' ? {} : {}
           });
           return;

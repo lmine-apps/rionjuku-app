@@ -15,7 +15,7 @@
 
 // ===== 設定 =====
 // ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
-const VERSION = 'v1.8.1';
+const VERSION = 'v1.9.0';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -25,6 +25,7 @@ const SH_REPLY   = 'お知らせ回答';
 const SH_LOG     = 'ログイン履歴';
 const SH_PUSH    = 'プッシュ';      // 通知の宛先（端末トークン）
 const SH_WATCH   = '視聴状況';      // 誰がどの動画を観たか（1人1行）
+const WATCH_SHOW_MIN = 3;          // 「○名の方が視聴済み」を出す最少人数（これ未満は出さない）
 const TOKEN_DAYS = 30;             // ログイン保持日数
 const MAX_FAIL   = 10;             // 同一メールの連続失敗許容数（10分間）
 const TZ         = 'Asia/Tokyo';
@@ -605,8 +606,20 @@ function apiData_(p) {
   courseList.forEach(function (c) {
     c.chapters.forEach(function (ch) { total += ch.videos.length; });
   });
-  const watched = watchGet_(u.email);
+  // 視聴状況シートは1回だけ読み、「自分の分」と「動画ごとの人数」の両方をここから作る
+  const all = watchAll_();
+  const watched = all[email_(u.email)] || [];
   const mine = watched.filter(function (id) { return idSet[id]; });
+
+  // 動画ごとの視聴人数。少人数のうちは出さない（「1名が視聴済み」はかえって寂しいため）
+  const tally = {};
+  Object.keys(all).forEach(function (m) {
+    all[m].forEach(function (id) { if (idSet[id]) tally[id] = (tally[id] || 0) + 1; });
+  });
+  const counts = {};
+  Object.keys(tally).forEach(function (id) {
+    if (tally[id] >= WATCH_SHOW_MIN) counts[id] = tally[id];
+  });
 
   return {
     ok: true,
@@ -615,6 +628,7 @@ function apiData_(p) {
     news: newsForUser_(u),
     myReplies: myReplies_(u),
     watched: mine,
+    watchCounts: counts,
     progress: { done: mine.length, total: total }
   };
 }
