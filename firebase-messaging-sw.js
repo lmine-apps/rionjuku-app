@@ -9,6 +9,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 var q = new URLSearchParams(self.location.search);
+
+/* アイコンにアプリと同じバージョンを付ける。
+   付けないと、通知を有効にした当時の古い画像を端末が使い続けてしまう。
+   （2026-08-18の仮アイコンのまま、という状態が実際に起きた） */
+var VER = q.get('v') || '';
+var ICON = 'icon-192.png' + (VER ? '?v=' + VER : '');
 var cfg = {
   apiKey: q.get('apiKey') || '',
   authDomain: q.get('authDomain') || '',
@@ -26,8 +32,8 @@ if (cfg.projectId) {
     var n = payload.notification || {};
     self.registration.showNotification(d.title || n.title || '凛穏塾', {
       body: d.body || n.body || '',
-      icon: d.icon || 'icon-192.png',
-      badge: 'icon-192.png',
+      icon: d.icon || ICON,
+      badge: ICON,
       tag: d.tag || 'rionjuku',
       data: { url: d.url || './' }
     });

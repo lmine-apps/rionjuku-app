@@ -521,7 +521,11 @@
       .then(function (perm) {
         if (perm !== 'granted') throw new Error('通知が許可されませんでした。端末の設定からも変更できます。');
         var q = new URLSearchParams(RJ.CFG.FIREBASE).toString();
-        return navigator.serviceWorker.register('firebase-messaging-sw.js?' + q);
+        // アプリと同じバージョンを渡す。URLが変わることで、新しいSWがすぐ使われる
+        var sv = (document.querySelector('script[src*="app.js"]') || {}).src || '';
+        var mv = sv.match(/[?&]v=(\d+)/);
+        return navigator.serviceWorker.register(
+          'firebase-messaging-sw.js?' + q + (mv ? '&v=' + mv[1] : ''));
       })
       .then(function (reg) {
         return firebase.messaging().getToken({ vapidKey: RJ.CFG.VAPID_KEY, serviceWorkerRegistration: reg });
