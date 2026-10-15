@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.8.1
+ * VERSION: v1.9.2
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -15,7 +15,7 @@
 
 // ===== 設定 =====
 // ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
-const VERSION = 'v1.9.0';
+const VERSION = 'v1.9.2';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -407,6 +407,44 @@ function newsForUser_(u) {
 }
 
 // ===== ログイン =====
+/**
+ * パスワードをシートに書く。
+ * 「0123」のような先頭ゼロの文字列は、セルの書式が「自動」だと
+ * Googleが数値123に変換してしまい、先頭の0が消える。
+ * 書式を「文字列」にしてから書くことで、打ったとおりに残す。
+ */
+function writePass_(sh, row, v) {
+  sh.getRange(row, S_PASS).setNumberFormat('@').setValue(String(v));
+}
+
+/**
+ * パスワードの照合。
+ * v1.9.0以前に「0123」のような先頭ゼロで設定した方は、
+ * シート側が123になってしまい、正しいパスワードでも入れなくなっている。
+ * そこで、先頭ゼロを取った形がシートの値と一致するときも通す。
+ *
+ * ここでセルを「0123」に書き直してはいけない。
+ * 本当のパスワードが「123」の方が「0123」と打ち間違えただけで
+ * パスワードが書き換わり、本人が締め出されてしまうため。
+ * 通すだけなら、もともと正しい数字を知っている人しか入れないので危なくない。
+ */
+function passMatch_(u, pass) {
+  if (u.pass === pass) return true;
+  if (!/^0\d+$/.test(pass)) return false;        // 先頭ゼロの数字のときだけ
+  if (!/^\d+$/.test(u.pass)) return false;
+  return String(Number(pass)) === u.pass;
+}
+
+/**
+ * 閲覧者一覧のパスワード列を、まとめて「文字列」書式にそろえる。
+ * スクリプトエディタから1回流せばよい（データは書き換えない）。
+ */
+function fixPasswordColumnFormat() {
+  const sh = studentSheet_();
+  const n = Math.max(sh.getMaxRows() - 1, 1);
+  sh.getRange(2, S_PASS, n, 1).setNumberFormat('@');
+}
+
 function apiLogin_(p) {
   const mail = email_(p.email);
   const pass = String(p.password == null ? '' : p.password).trim();
@@ -418,7 +456,7 @@ function apiLogin_(p) {
   if (fails >= MAX_FAIL) return { ok: false, error: 'locked' };
 
   const u = findStudent_(mail);
-  if (!u || u.pass === '' || u.pass !== pass) {
+  if (!u || u.pass === '' || !passMatch_(u, pass)) {
     cache.put(key, String(fails + 1), 600);
     return { ok: false, error: 'bad_credentials' };
   }
@@ -511,7 +549,7 @@ function apiFirstPassword_(p) {
     if (u.firstSet) return { ok: false, error: 'already_set' };
 
     const sh = studentSheet_();
-    sh.getRange(u.row, S_PASS).setValue(np);
+    writePass_(sh, u.row, np);
     sh.getRange(u.row, S_FIRST).setValue(nowStr_());
     if (s_(p.uid)) sh.getRange(u.row, S_UID).setValue(s_(p.uid));
 
@@ -661,7 +699,7 @@ function apiProfileSave_(p) {
       const np = String(p.password).trim();
       if (np.length < 4) return { ok: false, error: 'password_too_short' };
       if (s_(p.current) !== u.pass) return { ok: false, error: 'current_wrong' };
-      sh.getRange(u.row, S_PASS).setValue(np);
+      writePass_(sh, u.row, np);
     }
     const fresh = findStudent_(u.email);
     return { ok: true, user: userPayload_(fresh || u) };
@@ -898,7 +936,7 @@ function apiStudentSave_(p) {
     }
     sh.getRange(row, S_NAME).setValue(s_(p.name));
     sh.getRange(row, S_MAIL).setValue(mail);
-    if (s_(p.password)) sh.getRange(row, S_PASS).setValue(String(p.password).trim());
+    if (s_(p.password)) writePass_(sh, row, String(p.password).trim());
     sh.getRange(row, S_TAGS).setValue(s_(p.tags));
     sh.getRange(row, S_STATUS).setValue(s_(p.status) || '有効');
     if (p.memo != null) sh.getRange(row, S_MEMO).setValue(s_(p.memo));
