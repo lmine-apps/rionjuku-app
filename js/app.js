@@ -1121,7 +1121,7 @@
     show('scWatch');
     $('vTitle').innerHTML = esc(v.title || '（無題）') + markBadge(v);
     var hint = $('vHint');
-    if (v.hint) { hint.textContent = v.hint; hint.classList.remove('hidden'); }
+    if (v.hint) { hint.innerHTML = RJ.linkify(v.hint); hint.classList.remove('hidden'); }
     else { hint.classList.add('hidden'); }
     $('vCrumb').textContent = state.courses[state.ci].name + '　＞　' + item.chapter;
 
