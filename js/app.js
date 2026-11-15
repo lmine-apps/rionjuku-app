@@ -292,10 +292,18 @@
       .then(function () { btn.disabled = false; btn.textContent = 'ログイン'; });
   });
 
-  // ---------- 初回パスワード設定 ----------
-  $('firstLink').addEventListener('click', function () {
-    RJ.modal('はじめての方（パスワードの設定）',
-      '<p style="margin-top:0;font-size:14px">凛穏塾にご登録のメールアドレスを入力してください。<br>'
+  // ---------- パスワードの設定（はじめての方／お忘れの方）----------
+  //   入口は2つですが、やることは同じです。
+  //   「初回」か「お忘れの再設定」かは、GAS側が閲覧者一覧を見て決めます。
+  function openPasswordSetup(forgot) {
+    RJ.modal(forgot ? 'パスワードを決め直す' : 'はじめての方（パスワードの設定）',
+      (forgot && !uid
+        ? '<div class="msg err" style="margin:0 0 14px">'
+          + '凛穏塾のLINEから、このページを開いてください。<br>'
+          + 'ご本人のご確認にLINEを使っているため、こちらからではお手続きができません。<br>'
+          + 'LINEからお入りになれない場合は、運営スタッフまでお問い合わせください。</div>'
+        : '')
+      + '<p style="margin-top:0;font-size:14px">凛穏塾にご登録のメールアドレスを入力してください。<br>'
       + 'ご本人の確認ができたら、その場でパスワードをお決めいただけます。</p>'
       + '<div class="field"><label>メールアドレス</label>'
       + '<input id="fsEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"></div>',
@@ -308,18 +316,26 @@
           firstStep2(mail, res);
         });
       }, { saveText: '次へ' });
-  });
+  }
+  $('firstLink').addEventListener('click', function () { openPasswordSetup(false); });
+  $('forgotLink').addEventListener('click', function () { openPasswordSetup(true); });
 
   function firstStep2(mail, info) {
-    RJ.modal((info.name || '') + ' さん、ようこそ',
-      '<p style="margin-top:0;font-size:14px">これからお使いいただくパスワードを決めてください。</p>'
+    var reset = (info && info.mode === 'reset');
+    RJ.modal(reset ? ((info.name || '') + ' さん、パスワードの再設定')
+                   : ((info.name || '') + ' さん、ようこそ'),
+      '<p style="margin-top:0;font-size:14px">' + (reset
+        ? '新しいパスワードを決めてください。<br>今までのパスワードは使えなくなります。'
+        : 'これからお使いいただくパスワードを決めてください。') + '</p>'
       + (info.needWord
         ? '<div class="field"><label>合言葉（ご案内に記載しています）</label><input id="fsWord" type="text"></div>' : '')
       + '<div class="field"><label>新しいパスワード（4文字以上）</label>'
       + '<input id="fsPass" type="password" autocomplete="new-password"></div>'
       + '<div class="field"><label>もう一度入力してください</label>'
       + '<input id="fsPass2" type="password" autocomplete="new-password"></div>'
-      + '<div class="hint">次回からは、このメールアドレスとパスワードでログインします。</div>',
+      + '<div class="hint">次回からは、このメールアドレスと'
+      + (reset ? '新しいパスワード' : 'パスワード') + 'でログインします。<br>'
+      + '凛穏塾のLINEからこのページを開けば、パスワードを入れずにお入りいただけます。</div>',
       function (close, setMsg) {
         var w = $('fsWord') ? $('fsWord').value.trim() : '';
         var p1 = $('fsPass').value.trim(), p2 = $('fsPass2').value.trim();
@@ -756,7 +772,8 @@
       '<div class="field"><label>今のパスワード</label><input id="pfCur" type="password" autocomplete="current-password"></div>'
       + '<div class="field"><label>新しいパスワード（4文字以上）</label><input id="pfNew" type="password" autocomplete="new-password"></div>'
       + '<div class="field"><label>新しいパスワード（確認）</label><input id="pfNew2" type="password" autocomplete="new-password"></div>'
-      + '<div class="hint">お忘れになった場合は運営スタッフが再発行できます。</div>',
+      + '<div class="hint">お忘れになった場合は、凛穏塾のLINEからこのページを開いて、'
+      + 'ログイン画面の「パスワードを決め直す」からご自身で設定していただけます。</div>',
       function (close, setMsg) {
         var cur = $('pfCur').value.trim(), np = $('pfNew').value.trim(), np2 = $('pfNew2').value.trim();
         if (!cur || !np) { setMsg('すべて入力してください。'); return; }

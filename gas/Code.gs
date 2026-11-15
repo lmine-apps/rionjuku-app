@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.9.2
+ * VERSION: v1.10.0
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -9,13 +9,15 @@
  *
  * ★スプシは「リンクを知っている全員」共有をOFFにすること（パスワードが平文で入るため）。
  *
+ * v1.10.0 追加：パスワードをお忘れの方が、LINE経由でご自身で決め直せるように
+ *               （本人確認＝LINEのuid。運営がI列を空にする手作業は不要になりました）
  * v1.5.0 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
  *              アカウント設定（表示名・パスワード変更）・LINE UIDの回収・uidログイン（既定OFF）
  */
 
 // ===== 設定 =====
 // ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
-const VERSION = 'v1.9.2';
+const VERSION = 'v1.10.0';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -508,6 +510,27 @@ function firstSetupOpen_() {
   return new Date() <= end;
 }
 
+/**
+ * ★どちらの用でお見えになったかを決めます（2026-11-15 追加）
+ *
+ *   'first' … まだパスワードをお決めになっていない方（I列が空）
+ *   'reset' … すでにお決めになった方＝「パスワードをお忘れの方」。
+ *             LINEからこのページを開いていただき、そのLINEが
+ *             閲覧者一覧のご本人（H列）と一致するときだけお通しします。
+ *   ''      … お通ししません
+ *
+ *   ★なぜLINEを見るのか
+ *     メールアドレスだけでお通しすると、他の方のパスワードを書き換えられて
+ *     しまいます。LINEのuidはプロラインの転送URLからしか付かないので、
+ *     これをご本人の確認に使っています。
+ *     LINEが結びついていない方は、これまでどおり運営へのご連絡になります。
+ */
+function firstMode_(u, uid) {
+  if (!u.firstSet) return 'first';
+  if (uid && u.uid && u.uid === uid) return 'reset';
+  return '';
+}
+
 /** ①メールアドレスの確認だけ行う */
 function apiFirstCheck_(p) {
   const mail = email_(p.email);
@@ -519,14 +542,21 @@ function apiFirstCheck_(p) {
   if (n >= 10) return { ok: false, error: 'locked' };
   cache.put(key, String(n + 1), 600);
 
-  if (!firstSetupOpen_()) return { ok: false, error: 'setup_closed' };
-  if (firstSetupRequireUid_() && !s_(p.uid)) return { ok: false, error: 'need_line' };
-
   const u = findStudent_(mail);
   if (!u) return { ok: false, error: 'not_registered' };
   if (u.stopped) return { ok: false, error: 'stopped' };
-  if (u.firstSet) return { ok: false, error: 'already_set' };
-  return { ok: true, name: u.name, needWord: !!firstSetupWord_() };
+
+  const mode = firstMode_(u, s_(p.uid));
+  if (!mode) return { ok: false, error: 'already_set' };
+
+  // 受付の期限と合言葉は「初回設定」のきまりです。お忘れの再設定には掛けません
+  if (mode === 'first') {
+    if (!firstSetupOpen_()) return { ok: false, error: 'setup_closed' };
+    if (firstSetupRequireUid_() && !s_(p.uid)) return { ok: false, error: 'need_line' };
+  }
+
+  return { ok: true, name: u.name, mode: mode,
+           needWord: (mode === 'first' && !!firstSetupWord_()) };
 }
 
 /** ②新しいパスワードを保存し、そのままログインさせる */
@@ -535,10 +565,6 @@ function apiFirstPassword_(p) {
   const np = String(p.password == null ? '' : p.password).trim();
   if (!mail || !np) return { ok: false, error: 'empty' };
   if (np.length < 4) return { ok: false, error: 'password_too_short' };
-  if (!firstSetupOpen_()) return { ok: false, error: 'setup_closed' };
-  if (firstSetupRequireUid_() && !s_(p.uid)) return { ok: false, error: 'need_line' };
-  const word = firstSetupWord_();
-  if (word && s_(p.word) !== word) return { ok: false, error: 'bad_word' };
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -546,15 +572,26 @@ function apiFirstPassword_(p) {
     const u = findStudent_(mail);
     if (!u) return { ok: false, error: 'not_registered' };
     if (u.stopped) return { ok: false, error: 'stopped' };
-    if (u.firstSet) return { ok: false, error: 'already_set' };
+
+    // ★画面の申告は見ません。こちらでもう一度決め直します
+    const mode = firstMode_(u, s_(p.uid));
+    if (!mode) return { ok: false, error: 'already_set' };
+
+    if (mode === 'first') {
+      if (!firstSetupOpen_()) return { ok: false, error: 'setup_closed' };
+      if (firstSetupRequireUid_() && !s_(p.uid)) return { ok: false, error: 'need_line' };
+      const word = firstSetupWord_();
+      if (word && s_(p.word) !== word) return { ok: false, error: 'bad_word' };
+    }
 
     const sh = studentSheet_();
     writePass_(sh, u.row, np);
-    sh.getRange(u.row, S_FIRST).setValue(nowStr_());
+    // I列は「初回に設定した日」のままにしておきます（お忘れの再設定では触りません）
+    if (mode === 'first') sh.getRange(u.row, S_FIRST).setValue(nowStr_());
     if (s_(p.uid)) sh.getRange(u.row, S_UID).setValue(s_(p.uid));
 
     const fresh = findStudent_(mail) || u;
-    logLogin_(fresh, '初回設定');
+    logLogin_(fresh, mode === 'reset' ? 'パスワード再設定' : '初回設定');
     return { ok: true, token: makeToken_(fresh), user: userPayload_(fresh) };
   } finally { lock.releaseLock(); }
 }
