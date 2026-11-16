@@ -317,6 +317,27 @@
         });
       }, { saveText: '次へ' });
   }
+  // LINEでかんたんログイン（2026-11-16）
+  // ログイン画面にも置く。メニューの「LINE連携」はログイン中の方しか見られないため、
+  // ログアウトされた方・機種を変えられた方が、ここからステップを動かせるようにする。
+  if (RJ.CFG.LINE_LINK_URL && RJ.CFG.LINE_QUICK_LOGIN) {
+    $('lineLoginBox').classList.remove('hidden');
+    $('lineLoginBtn').addEventListener('click', function () {
+      RJ.modal('LINEでかんたんログイン',
+        '<p style="margin-top:0">LINEが開きます。そのまま進んでいただくと、'
+        + '<b>ログイン用のURL</b>がトークに届きます。</p>'
+        + '<p>届いたURLを開いてください。'
+        + '<b>連携がお済みの方は、そのままお入りいただけます。</b></p>'
+        + '<p class="guide-caption">はじめての方は、一度だけメールアドレスとパスワードの入力をお願いします。'
+        + 'それで連携が済み、次からは開くだけになります。</p>',
+        function (close) {
+          window.open(RJ.CFG.LINE_LINK_URL, '_blank', 'noopener');
+          close();
+        },
+        { saveText: 'LINEを開く', cancelText: 'あとで' });
+    });
+  }
+
   $('firstLink').addEventListener('click', function () { openPasswordSetup(false); });
   $('forgotLink').addEventListener('click', function () { openPasswordSetup(true); });
 
@@ -365,6 +386,7 @@
     if (act === 'admin') { location.href = 'admin.html' + (RJ.MOCK ? '?mock=1' : ''); return; }
     if (act === 'newnews') { location.href = 'admin.html?open=news' + (RJ.MOCK ? '&mock=1' : ''); return; }
     if (act === 'newvideo') { location.href = 'admin.html?open=video' + (RJ.MOCK ? '&mock=1' : ''); return; }
+    if (act === 'linelink') showLineLink();
     if (act === 'name') editName();
     if (act === 'pass') editPassword();
     if (act === 'guide') showGuide();
@@ -812,6 +834,40 @@
     } catch (e) { return null; }
   }
   /**
+   * メニューの「LINE連携」（2026-11-16）
+   *
+   * ★なにをするもの？
+   *   LINEから開くだけでお入りいただけるようにするための、結びつけです。
+   *   手順をお読みいただいたうえで、プロラインのステップを着火します。
+   *   届いたURLを開いていただくと、そこで一度だけログインが必要になり、
+   *   そのときにLINEのUIDが名簿（H列）に記録されます。
+   *
+   * ★「もう入っているのに、なぜもう一度？」への答えを本文に入れてあります。
+   *   LINEのトークから開くと別のブラウザになるため、そちらでは初めましてになります。
+   */
+  function showLineLink() {
+    var url = RJ.CFG.LINE_LINK_URL;
+    RJ.modal('LINE連携（かんたんログイン）',
+      '<p style="margin-top:0">連携すると、<b>凛穏塾のLINEから開くだけ</b>でお入りいただけるようになります。'
+      + 'パスワードを入れる必要がなくなります。</p>'
+      + '<ol class="guide-ol">'
+      + '<li><b>下のボタンを押します</b><br>LINEが開き、ログイン用のURLがトークに届きます。</li>'
+      + '<li><b>届いたURLを開きます</b></li>'
+      + '<li><b>ログイン画面が出たら、一度だけ入力します</b><br>'
+      + 'メールアドレスとパスワードです。<b>必要なのはこの一度だけ</b>です。<br>'
+      + 'そのままお入りになれた場合は、それで完了です。</li>'
+      + '</ol>'
+      + '<div class="guide-tip"><b>次からは</b><p>LINEからこのページを開くだけでお入りいただけます。</p></div>'
+      + '<p class="guide-caption">スマートフォンでLINEをお使いの方向けです。'
+      + 'パソコンからは、これまでどおりメールアドレスとパスワードでお入りください。</p>',
+      function (close) {
+        window.open(url, '_blank', 'noopener');
+        close();
+      },
+      { saveText: 'LINEを開いて連携する', cancelText: 'あとで' });
+  }
+
+  /**
    * LINEから来てくださった方に、連携のお願いをお出しする（2026-11-16）
    * 出るのは「LINEのUIDがまだ名簿に無い方」だけ。一度ログインしていただければ
    * UIDが記録されるので、次からは出ません。
@@ -910,6 +966,10 @@
         el.classList.remove('hidden');
       });
     }
+    // 「LINE連携」は、まだ結びついていない方にだけお出しする（2026-11-16）。
+    // 済んだ方のメニューには出さない（済んだかどうかは名簿のH列＝user.uid で分かる）。
+    $('mLineLink').classList.toggle('hidden',
+      !RJ.CFG.LINE_LINK_URL || !RJ.CFG.LINE_QUICK_LOGIN || !!state.user.uid);
     renderNewsBadge();
     playGate();
     pushRefresh();

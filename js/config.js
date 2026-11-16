@@ -18,6 +18,11 @@ window.RJ_CONFIG = {
   // スクリプトプロパティ LINE_QUICK_LOGIN も on にしてください（二重ロック）。
   LINE_QUICK_LOGIN: true,
 
+  // メニューの「LINE連携」から着火する、プロラインのステップのURL。
+  // 押すとLINEが開き、ログイン用のURL（?uid=付き）がトークに届きます。
+  // 空にすると、メニューの項目そのものが出なくなります。
+  LINE_LINK_URL: 'https://mka0tn6z.autosns.app/addfriend/s/IxaQFqNy6W/@129snyzr',
+
   // ── Webプッシュ通知（Firebase Cloud Messaging）──────────
   // 下の FIREBASE と VAPID_KEY を埋めてから PUSH_READY を true にする。
   PUSH_READY: true,

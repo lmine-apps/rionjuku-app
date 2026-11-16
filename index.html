@@ -11,12 +11,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="凛穏塾">
 <meta name="theme-color" content="#07172c">
-<link rel="apple-touch-icon" href="icon-192.png?v=61">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=61">
-<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png?v=61">
-<link rel="icon" href="icon-192.png?v=61">
+<link rel="apple-touch-icon" href="icon-192.png?v=62">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=62">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png?v=62">
+<link rel="icon" href="icon-192.png?v=62">
 <title>凛穏塾｜受講生専用 動画ページ</title>
-<link rel="stylesheet" href="css/style.css?v=61">
+<link rel="stylesheet" href="css/style.css?v=62">
 <script>
   /* 選ばれている配色を、画面が描かれる前にあてる（切り替わるちらつきを防ぐ） */
   try {
@@ -49,7 +49,7 @@
 <div id="splash" class="splash">
   <div class="splash__glow"></div>
   <div class="fall fall--splash" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-  <img class="splash__logo" src="assets/logo-app.png?v=61" alt="凛穏塾" width="480" height="480">
+  <img class="splash__logo" src="assets/logo-app.png?v=62" alt="凛穏塾" width="480" height="480">
 </div>
 <script>
 (function () {
@@ -85,6 +85,14 @@
       <button id="loginBtn" class="btn" type="submit">ログイン</button>
       <div id="loginMsg" class="msg"></div>
     </form>
+    <!-- LINEでかんたんログイン（2026-11-16）。押すとプロラインのステップが動き、
+         ログイン用のURLがLINEのトークに届きます。連携がお済みの方は、
+         そのURLを開くだけでパスワードなしでお入りいただけます。 -->
+    <div class="first-box hidden" id="lineLoginBox">
+      <div class="first-box__t">LINEでかんたんログイン</div>
+      <button id="lineLoginBtn" class="btn-first" type="button">LINEにログインURLを送る</button>
+      <p class="first-box__d">届いたURLを開くだけでお入りいただけます</p>
+    </div>
     <div class="first-box">
       <div class="first-box__t">はじめてご利用の方</div>
       <button id="firstLink" class="btn-first" type="button">パスワードを設定する</button>
@@ -98,9 +106,8 @@
     </div>
     <div class="login-note">
       2回目以降は、ご自身で決めたパスワードでお入りください。<br>
-      お忘れのときは、凛穏塾のLINEからこのページを開いていただくと、
-      パスワードを入れずにそのままお入りいただけます。<br>
-      それでもお入りになれない場合は、運営スタッフまでお問い合わせください。
+      パスワードをお忘れのときは、上の「LINEでかんたんログイン」からお入りいただけます。<br>
+      それでもお入りになれない場合は、凛穏塾のLINEにそのままご返信ください。
     </div>
   </div>
 </div>
@@ -114,6 +121,8 @@
     <div class="acct">
       <button id="acctBtn" type="button"><span id="who"></span> ▾</button>
       <div id="acctMenu" class="acct-menu hidden">
+        <!-- LINE連携がまだの方にだけ出す（2026-11-16）。連携ずみの方には表示しません -->
+        <button data-act="linelink" id="mLineLink" class="hidden" type="button">💬 LINE連携（かんたんログイン）</button>
         <button data-act="guide" type="button">📖 使い方ガイド</button>
         <button data-act="push" type="button">🔔 通知の設定</button>
         <button data-act="skin" type="button">🎨 配色を変える</button>
@@ -228,10 +237,10 @@
 </div>
 
 <script src="https://player.vimeo.com/api/player.js"></script>
-<script src="js/config.js?v=61"></script>
-<script src="js/common.js?v=61"></script>
-<script src="js/season.js?v=61"></script>
-<script src="js/mock.js?v=61"></script>
-<script src="js/app.js?v=61"></script>
+<script src="js/config.js?v=62"></script>
+<script src="js/common.js?v=62"></script>
+<script src="js/season.js?v=62"></script>
+<script src="js/mock.js?v=62"></script>
+<script src="js/app.js?v=62"></script>
 </body>
 </html>
