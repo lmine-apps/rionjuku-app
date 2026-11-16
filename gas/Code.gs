@@ -17,7 +17,7 @@
 
 // ===== 設定 =====
 // ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
-const VERSION = 'v1.10.0';
+const VERSION = 'v1.11.0';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -28,7 +28,19 @@ const SH_LOG     = 'ログイン履歴';
 const SH_PUSH    = 'プッシュ';      // 通知の宛先（端末トークン）
 const SH_WATCH   = '視聴状況';      // 誰がどの動画を観たか（1人1行）
 const WATCH_SHOW_MIN = 3;          // 「○名の方が視聴済み」を出す最少人数（これ未満は出さない）
-const TOKEN_DAYS = 30;             // ログイン保持日数
+/**
+ * ログイン保持日数（2026-11-16に30日から365日へ）
+ *
+ * ★なぜ延ばしたか
+ *   30日だと、毎日お使いの方でも月に一度ログイン画面に戻されていました。
+ *   「パスワードをお忘れ」のお問い合わせは、忘れたというより
+ *   覚えていられない間隔で毎月おたずねしていたことが原因でした。
+ *
+ * ★あわせて apiData_ が新しいトークンを返すようにしました（ローリング）。
+ *   アプリを開くたびに期限が今日から365日に延びるので、
+ *   年に一度でも開いてくださる方はログイン画面をご覧になりません。
+ */
+const TOKEN_DAYS = 365;            // ログイン保持日数
 const MAX_FAIL   = 10;             // 同一メールの連続失敗許容数（10分間）
 const TZ         = 'Asia/Tokyo';
 
@@ -698,6 +710,9 @@ function apiData_(p) {
 
   return {
     ok: true,
+    // ★開いていただくたびに期限を今日から数え直します（ローリング）。
+    //   ブラウザ側は res.token があるときだけ差し替えます（控えから読んだときは入っていません）。
+    token: makeToken_(u),
     user: userPayload_(u),
     courses: courseList,
     news: newsForUser_(u),

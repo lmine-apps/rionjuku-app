@@ -812,6 +812,9 @@
     } catch (e) { return null; }
   }
   function applyData(res) {
+    // 開くたびにログインの期限を延ばす（2026-11-16）。
+    // 控え（localStorage）から読んだときは res.token が無いので、そのときは触らない。
+    if (res.token) store.save(res.token, res.user);
     state.user = res.user;
     state.courses = res.courses || [];
     state.news = res.news || [];
