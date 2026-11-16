@@ -662,6 +662,10 @@
       + '<div class="guide-tab" aria-label="端末を選択"><button class="gt on" data-os="ios" aria-pressed="true" type="button">iPhone</button><button class="gt" data-os="and" aria-pressed="false" type="button">Android</button></div>'
       + '<div id="guideOsIos"><ol class="guide-ol"><li><b>Safari</b>でこのページを開きます。</li><li><b>共有（□に↑）→「ホーム画面に追加」</b>を選びます。</li><li>「Webアプリとして開く」がある場合はオンにして<b>「追加」</b>。追加したアイコンから開きます。</li><li><b>そこで一度だけログインしてください</b><br>これが最後です。次からはそのまま開きます。</li></ol></div>'
       + '<div id="guideOsAnd" class="hidden"><ol class="guide-ol"><li><b>Chrome</b>でこのページを開きます。</li><li><b>右上の︙ →「ホーム画面に追加」</b>を選びます。</li><li>「インストール」または「追加」の案内に沿って進み、アイコンから開きます。</li><li><b>そこで一度だけログインしてください</b><br>これが最後です。次からはそのまま開きます。</li></ol></div>'
+      + '<div class="guide-tip"><b>LINEから開く画面とは別々です</b>'
+      + '<p>LINEでログインされても、ホーム画面のアイコンには引き継がれません（入れ物が別のためです）。'
+      + 'アイコンのほうは一度だけメールアドレスとパスワードでログイン、'
+      + 'LINEから開くときはパスワード不要。どちらもお使いの方は、それぞれ一度ずつお願いします。</p></div>'
       + '<p class="guide-caption">表示名やボタンの位置は、端末によって異なります。</p>' },
     { t: '通知を受け取るには', label: '通知設定', icon: '🔔', b:
       '<p class="guide-lead">新しいお知らせに気づけるよう、通知を設定できます。</p>'
