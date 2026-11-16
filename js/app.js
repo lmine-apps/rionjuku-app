@@ -811,6 +811,21 @@
       return d;
     } catch (e) { return null; }
   }
+  /**
+   * LINEから来てくださった方に、連携のお願いをお出しする（2026-11-16）
+   * 出るのは「LINEのUIDがまだ名簿に無い方」だけ。一度ログインしていただければ
+   * UIDが記録されるので、次からは出ません。
+   */
+  function lineLinkNotice() {
+    RJ.modal('LINEとの連携を行います',
+      '<p style="margin-top:0">このあと一度だけ、<b>メールアドレスとパスワード</b>をご入力ください。</p>'
+      + '<p>LINEとこのページを結びつけるための操作で、<b>必要なのは今回だけ</b>です。</p>'
+      + '<p>次からは、LINEからこのページを開くだけでお入りいただけます。'
+      + 'パスワードは必要ありません。</p>'
+      + '<p class="hint">パスワードが思い出せない方は、凛穏塾のLINEにそのままご返信ください。</p>',
+      null, { cancelText: 'わかりました' });
+  }
+
   function applyData(res) {
     // 開くたびにログインの期限を延ばす（2026-11-16）。
     // 控え（localStorage）から読んだときは res.token が無いので、そのときは触らない。
@@ -1776,7 +1791,12 @@
     if (uid && !store.token() && RJ.CFG.LINE_QUICK_LOGIN) {
       api('uid_login', { uid: uid })
         .then(function (res) {
-          if (res && res.ok) { store.save(res.token, res.user); start(); } else start();
+          if (res && res.ok) { store.save(res.token, res.user); start(); return; }
+          start();
+          // LINEから開いてくださったのに、まだ結びついていない方（2026-11-16）。
+          // 黙ってログイン画面を出すと「LINEから来たのに入れない」と見えてしまうので、
+          // 理由と「今回だけ」であることをお伝えする。
+          if (res && res.error === 'uid_not_found') lineLinkNotice();
         })
         .catch(function () { start(); });
     } else {
