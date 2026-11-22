@@ -109,10 +109,11 @@ function setupProductSheet_() {
 
   // たたき台。中身はあとから自由に書き換えてよい
   sh.getRange(2, 1, 4, P_COLS).setValues([
-    ['L1-TRIAL', '基礎講義 お試し90日', '基礎講義',          90,  'LEVEL1／伝説の500人講義・90分'],
-    ['L1',       '基礎講義 1年',        '基礎講義',          365, 'LEVEL1'],
-    ['L2',       '実践講義 1年',        '実践講義',          365, 'LEVEL2／2Days＋質問回答会＋補足ボイス'],
-    ['SET',      '完全セット 1年',      '基礎講義,実践講義', 365, 'LEVEL1＋LEVEL2'],
+    // タグは L1・L2（「基礎」「実践」は今後ほかの講座でも使いそうなので避ける。2026-11-22）
+    ['L1-TRIAL', 'LEVEL1 お試し90日', 'L1',    90,  'LEVEL1／伝説の500人講義'],
+    ['L1',       'LEVEL1 1年',        'L1',    365, 'LEVEL1'],
+    ['L2',       'LEVEL2 1年',        'L2',    365, 'LEVEL2／2Days＋質問回答会＋補足ボイス'],
+    ['SET',      '完全セット 1年',    'L1,L2', 365, 'LEVEL1＋LEVEL2'],
   ]);
 
   return SH_PRODUCT + '：作って、たたき台を4行入れました';
@@ -456,8 +457,92 @@ function apiAccountSetup_(p) {
     }
     const fresh = findStudent_(mail || u.email) || u;
     logLogin_(fresh, 'ご登録（メール・パスワード）');
-    return { ok: true, token: makeToken_(fresh), user: userPayload_(fresh) };
+    if (mail) moveDevices_(u.email, mail);     // 端末の枠も、新しいアドレスへ引っ越します
+    return { ok: true, token: makeToken_(fresh, deviceEnter_(fresh, g.sid || p.dev, 'ご登録')), user: userPayload_(fresh) };
   } finally { lock.releaseLock(); }
+}
+
+/* =====================================================================
+ * 端末の枠（v1.13.0・2026-11-22）
+ *
+ * ご購入の方は、同時にお使いいただける端末（ブラウザ）を DEVICE_MAX 個までにします。
+ *   ・枠がいっぱいのときに新しい端末でお入りになると、
+ *     「いちばん長く使っていない端末」が1つ押し出されます（その端末は次に開いたときログアウト）。
+ *   ・ご本人は困らず、ログイン情報を人に渡している場合だけ、互いに追い出し合うことになります。
+ *   ・受講生（タグでご覧の方）と運営には掛かりません。視聴権シートに行がある方だけが対象です。
+ *   ・「端末」シートの行を運営が手で消すと、その端末を外せます。
+ *
+ * ★スマホ1台でも「LINEの中」「ホーム画面のアイコン」「Safari」は別々の枠になります（入れ物が別のため）。
+ * ★上限はスクリプトプロパティ DEVICE_MAX で変えられます（空欄＝3。再デプロイ不要）。
+ * ===================================================================== */
+const SH_DEVICE = '端末';
+const D_MAIL = 1, D_ID = 2, D_FIRST = 3, D_LAST = 4, D_HOW = 5, D_COLS = 5;
+/** 「最後に使った時刻」を書き直す間隔。開くたびに書くと遅くなるので、これより新しければ書かない */
+const DEVICE_TOUCH_MIN = 60;
+
+function deviceMax_() {
+  const n = Number(PropertiesService.getScriptProperties().getProperty('DEVICE_MAX'));
+  return n >= 1 ? Math.floor(n) : 3;
+}
+function deviceRows_() {
+  const sh = ss_().getSheetByName(SH_DEVICE);
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, D_COLS).getValues().map(function (r, i) {
+    return { row: i + 2, mail: email_(r[D_MAIL - 1]), id: s_(r[D_ID - 1]),
+             last: r[D_LAST - 1] instanceof Date ? r[D_LAST - 1].getTime() : (new Date(r[D_LAST - 1]).getTime() || 0) };
+  });
+}
+function isBuyer_(u) {
+  if (!u || u.admin) return false;
+  return rightsOf_(rightsAll_(), u.uid, u.email).length > 0;
+}
+/** この端末は、まだ枠の中に居るか */
+function deviceAlive_(mail, sid) {
+  const m = email_(mail);
+  return deviceRows_().some(function (d) { return d.mail === m && d.id === sid; });
+}
+/**
+ * 端末を枠に入れる。返り値＝端末の印（トークンに入れる）。ご購入の方でなければ空文字（何もしない）。
+ *   dev   … 画面が持っている端末の印。同じブラウザなら毎回同じなので、入り直しても枠は増えません
+ *   buyer … すでに分かっているときだけ渡す（シートの読み直しを省くため）
+ */
+function deviceEnter_(u, dev, how, buyer) {
+  try {
+    if (!u || u.admin) return '';
+    if (buyer === undefined ? !isBuyer_(u) : !buyer) return '';
+    const id = s_(dev).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64) || Utilities.getUuid().replace(/-/g, '');
+    const mail = email_(u.email);
+    const sh = sheetOrCreate_(SH_DEVICE, ['メールアドレス', '端末の印', '登録日時', '最後に使った日時', '入り方']);
+    const now = new Date();
+    const mine = deviceRows_().filter(function (d) { return d.mail === mail; });
+    const hit = mine.filter(function (d) { return d.id === id; })[0];
+    if (hit) {
+      if (now.getTime() - hit.last > DEVICE_TOUCH_MIN * 60000) sh.getRange(hit.row, D_LAST).setValue(now);
+      return id;
+    }
+    const row = sh.getLastRow() + 1;
+    sh.getRange(row, D_MAIL, 1, 2).setNumberFormat('@');
+    sh.getRange(row, D_FIRST, 1, 2).setNumberFormat('yyyy/MM/dd HH:mm');
+    sh.getRange(row, 1, 1, D_COLS).setValues([[mail, id, now, now, how || '']]);
+    // 枠を超えたぶんを、長く使っていない順に押し出す（下の行から消す＝行番号がずれない）
+    const over = mine.length + 1 - deviceMax_();
+    if (over > 0) {
+      mine.sort(function (a, b) { return a.last - b.last; }).slice(0, over)
+        .sort(function (a, b) { return b.row - a.row; })
+        .forEach(function (d) { sh.deleteRow(d.row); });
+    }
+    return id;
+  } catch (err) { return ''; }   // 枠の記録に失敗しても、ログインは止めない（印なし＝制限なしで通す）
+}
+/** メールアドレスが変わったとき（ご登録・統合）に、端末の枠も引っ越す */
+function moveDevices_(from, to) {
+  try {
+    from = email_(from); to = email_(to);
+    if (!from || !to || from === to) return;
+    const sh = ss_().getSheetByName(SH_DEVICE);
+    if (!sh) return;
+    deviceRows_().forEach(function (d) { if (d.mail === from) sh.getRange(d.row, D_MAIL).setNumberFormat('@').setValue(to); });
+  } catch (err) { /* 引っ越しの失敗でログインを止めない */ }
 }
 
 // ----- 片づけ -----
@@ -476,6 +561,7 @@ function absorbPlaceholder_(uid, realMail) {
       sh.getRange(s.row, S_STATUS).setValue('停止');
       sh.getRange(s.row, S_MEMO).setValue((s.memo ? s.memo + '／' : '') + realMail + ' に統合ずみ（' + nowStr_() + '）');
       moveWatch_(s.email, realMail);
+      moveDevices_(s.email, realMail);
     });
   } catch (err) { /* 片づけの失敗でログインを止めない */ }
 }

@@ -85,6 +85,8 @@
       return Promise.reject(new Error('セットアップ未完了：js/config.js の GAS_URL が空です。'));
     }
     var body = new URLSearchParams();
+    // この端末（ブラウザ）の印。ご購入の方の「端末は3つまで」を数えるために添えます（v1.13.0）
+    if (params && params.dev === undefined) { var dv = deviceId(); if (dv) body.append('dev', dv); }
     body.set('action', action);
     Object.keys(params || {}).forEach(function (k) {
       var v = params[k];
@@ -101,6 +103,19 @@
       })
       .then(function (res) { if (label) busyHide(); return res; },
             function (err) { if (label) busyHide(); throw err; });
+  }
+
+  /** この端末（ブラウザ）の印。はじめて開いたときに作り、以後は同じものを使います */
+  function deviceId() {
+    try {
+      var k = 'rj_dev', v = localStorage.getItem(k);
+      if (!v) {
+        var a = new Uint8Array(16); (w.crypto || w.msCrypto).getRandomValues(a);
+        v = Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+        localStorage.setItem(k, v);
+      }
+      return v;
+    } catch (e) { return ''; }
   }
 
   var store = {
@@ -125,6 +140,7 @@
     stopped: 'このアカウントは現在ご利用いただけません。運営までお問い合わせください。',
     locked: '入力を続けて間違えたため、一時的にロックしました。10分ほどおいてからお試しください。',
     unauthorized: 'ログインの有効期限が切れました。もう一度ログインしてください。',
+    device_limit: 'ほかの端末でログインされたため、この端末はログアウトしました。ご利用いただける端末は3つまでです。もう一度ログインすると、この端末でご覧いただけます。',
     forbidden: 'この操作の権限がありません。',
     row_moved: 'スプレッドシート側が更新されています。画面を再読み込みしてやり直してください。',
     duplicate_email: 'そのメールアドレスは既に登録されています。',

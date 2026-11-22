@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.12.0
+ * VERSION: v1.13.0
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -9,6 +9,9 @@
  *
  * ★スプシは「リンクを知っている全員」共有をOFFにすること（パスワードが平文で入るため）。
  *
+ * v1.13.0 追加：ご購入の方は、同時にお使いいただける端末を3つまでに（中身は Setup_Rights.gs）。
+ *               4つ目でお入りになると、いちばん長く使っていない端末が自動でログアウトします。
+ *               受講生（タグでご覧の方）と運営には掛かりません。
  * v1.12.0 追加：常時販売（オンライン講義）。プロラインの決済から視聴権を発行し、
  *               人ごとの視聴期限で出し分けます（中身は Setup_Rights.gs）。
  *               LINEだけでご購入の方（メールアドレスが空の行）もお入りいただけるように
@@ -20,7 +23,7 @@
 
 // ===== 設定 =====
 // ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
-const VERSION = 'v1.12.0';
+const VERSION = 'v1.13.0';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -219,8 +222,9 @@ function secret_() {
 }
 function b64_(bytes) { return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, ''); }
 function sign_(payloadB64) { return b64_(Utilities.computeHmacSha256Signature(payloadB64, secret_())); }
-function makeToken_(user) {
+function makeToken_(user, sid) {
   const payload = { e: user.email, a: user.admin ? 1 : 0, x: Date.now() + TOKEN_DAYS * 86400000 };
+  if (sid) payload.s = sid;          // ご購入の方だけ：どの端末かの印（端末の枠を数えるため）
   const p = b64_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
   return p + '.' + sign_(p);
 }
@@ -234,7 +238,7 @@ function auth_(token) {
     payload = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[0])).getDataAsString());
   } catch (err) { return null; }
   if (!payload || !payload.x || Date.now() > payload.x) return null;
-  return { email: payload.e, admin: payload.a === 1 };
+  return { email: payload.e, admin: payload.a === 1, sid: s_(payload.s) };
 }
 /** ログイン済みの受講生を取り出す（毎回シートで実在確認する） */
 function me_(p) {
@@ -243,7 +247,9 @@ function me_(p) {
   const u = findStudent_(t.email);
   if (!u) return { ok: false, error: 'unauthorized' };
   if (u.stopped) return { ok: false, error: 'stopped' };
-  return { ok: true, user: u };
+  // 端末の枠から押し出された端末は、ここでお断りします（ご購入の方だけ。印の無い方は素通り）
+  if (t.sid && !u.admin && !deviceAlive_(u.email, t.sid)) return { ok: false, error: 'device_limit' };
+  return { ok: true, user: u, sid: t.sid };
 }
 function requireAdmin_(p) {
   const g = me_(p);
@@ -498,7 +504,7 @@ function apiLogin_(p) {
   cache.remove(key);
   if (s_(p.uid)) saveUid_(u, s_(p.uid));   // LINEから来ていたらUIDも記録
   logLogin_(u, 'メール');
-  return { ok: true, token: makeToken_(u), user: userPayload_(u) };
+  return { ok: true, token: makeToken_(u, deviceEnter_(u, p.dev, 'メール')), user: userPayload_(u) };
 }
 
 /**
@@ -516,7 +522,7 @@ function apiUidLogin_(p) {
   if (!hit) return { ok: false, error: 'uid_not_found' };
   if (hit.stopped) return { ok: false, error: 'stopped' };
   logLogin_(hit, 'LINE');
-  return { ok: true, token: makeToken_(hit), user: userPayload_(hit) };
+  return { ok: true, token: makeToken_(hit, deviceEnter_(hit, p.dev, 'LINE')), user: userPayload_(hit) };
 }
 
 // ===== 初回パスワード設定（レクティからの移行者向け） =====
@@ -629,7 +635,7 @@ function apiFirstPassword_(p) {
 
     const fresh = findStudent_(mail) || u;
     logLogin_(fresh, mode === 'reset' ? 'パスワード再設定' : '初回設定');
-    return { ok: true, token: makeToken_(fresh), user: userPayload_(fresh) };
+    return { ok: true, token: makeToken_(fresh, deviceEnter_(fresh, p.dev, 'パスワード設定')), user: userPayload_(fresh) };
   } finally { lock.releaseLock(); }
 }
 
@@ -760,7 +766,8 @@ function apiData_(p) {
     ok: true,
     // ★開いていただくたびに期限を今日から数え直します（ローリング）。
     //   ブラウザ側は res.token があるときだけ差し替えます（控えから読んだときは入っていません）。
-    token: makeToken_(u),
+    //   ご購入の方は、ここで端末の枠も確かめます（すでに枠があれば「最後に使った時刻」を新しくするだけ）。
+    token: makeToken_(u, deviceEnter_(u, g.sid || p.dev, '', Object.keys(rights).length > 0)),
     user: userPayload_(u),
     courses: courseList,
     // お知らせの宛先は、いま有効な視聴権のタグも見ます（ご購入の方だけに届けられるように）

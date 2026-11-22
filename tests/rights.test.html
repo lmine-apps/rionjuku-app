@@ -38,6 +38,7 @@
   Sheet.prototype.setFrozenRows = function () {};
   Sheet.prototype.setColumnWidth = function () {};
   Sheet.prototype.deleteRows = function (from, n) { this.rows.splice(from - 1, n); };
+  Sheet.prototype.deleteRow = function (row) { this.rows.splice(row - 1, 1); };
   Sheet.prototype.getRange = function (r, c, nr, nc) {
     var sh = this; nr = nr || 1; nc = nc || 1;
     var range = {
@@ -161,8 +162,8 @@
     FAKE.sheet('コース設定', [
       ['コース名', 'タグ', '並び順', '公開', '説明'],
       ['凛穏塾2期生', '2期生', 10, '公開', ''],
-      ['基礎講義コース', '基礎講義', 20, '公開', ''],
-      ['実践講義コース', '実践講義', 30, '公開', '']
+      ['基礎講義コース', 'L1', 20, '公開', ''],
+      ['実践講義コース', 'L2', 30, '公開', '']
     ]);
     FAKE.sheet('閲覧者一覧', [
       ['名前', 'メールアドレス', 'パスワード', 'タグ', '状態', 'メモ', '登録日', 'LINE UID', '初回設定'],
@@ -171,7 +172,7 @@
       ['運営', 'admin@example.com', 'adm', 'admin', '有効', '', '', '', 'x']
     ]);
     FAKE.sheet('お知らせ', [['id', '日付', '見出し', '本文', '画像URL', '宛先タグ', '選択肢', '公開', 'ポップ', 'いいね'],
-      ['1', ymd(0), 'ご購入の方へ', '本文', '', '基礎講義', '', '公開', '', 0]]);
+      ['1', ymd(0), 'ご購入の方へ', '本文', '', 'L1', '', '公開', '', 0]]);
     FAKE.prop('LINE_QUICK_LOGIN', 'on');
     FAKE.prop('PURCHASE_SECRET', 'sec');
     G.setupRights();
@@ -323,6 +324,62 @@
     FAKE.get('閲覧者一覧').rows.push(['空の人', '', '', '2期生', '', '', '', '', '']);
     return G.students_().every(function (s) { return s.name !== '空の人'; });
   })());
+
+  /* ---------- お試しの再購入 ---------- */
+  world();
+  buy({ uid: 'uTR', product: 'L1-TRIAL' });
+  backdate(1, 100);
+  var tr2 = buy({ uid: 'uTR', product: 'L1-TRIAL' });
+  t('お試しの再購入は、視聴権を出したうえで印が付く', tr2.ok && tr2.trialAgain === true
+    && /お試しの再購入/.test(String(rights()[1][10])) && !!(FAKE.get('視聴権').bg || {})[3], [tr2, rights()[1]]);
+  t('はじめてのお試しには印が付かない', buy({ uid: 'uTR2', product: 'L1-TRIAL' }).trialAgain === false);
+
+  /* ---------- 端末は3つまで（ご購入の方だけ） ---------- */
+  world();
+  buy({ uid: 'uDEV', product: 'L1' });
+  function devs() { return (FAKE.get('端末') ? FAKE.get('端末').rows.slice(1) : []).filter(function (r) { return r && r.length; }); }
+  function lgDev(dev) { return G.apiUidLogin_({ uid: 'uDEV', dev: dev }); }
+  function age(dev, min) {            // その端末を「min分前に使った」ことにする
+    devs().forEach(function (r) { if (r[1] === dev) r[3] = new Date(Date.now() - min * 60000); });
+  }
+  var a = lgDev('devA'), b = lgDev('devB'), c = lgDev('devC');
+  t('3つまでは、そのまま入れる', a.ok && b.ok && c.ok && devs().length === 3, devs());
+  t('同じ端末で入り直しても、枠は増えない', lgDev('devB').ok && devs().length === 3);
+  age('devA', 300); age('devB', 100); age('devC', 200);
+  var d4 = lgDev('devD');
+  t('4つ目が入ると、枠は3つのまま', d4.ok && devs().length === 3, devs());
+  t('いちばん長く使っていない端末（A）が押し出される', devs().every(function (r) { return r[1] !== 'devA'; }), devs().map(function (r) { return r[1]; }));
+  t('押し出された端末は、次に開いたとき断られる', data(a.token).error === 'device_limit', data(a.token));
+  t('残った端末と新しい端末は、そのまま観られる', data(b.token).ok && data(c.token).ok && data(d4.token).ok);
+  t('押し出された端末も、入り直せばまた観られる', (function () {
+    var again = lgDev('devA');
+    return again.ok && data(again.token).ok && devs().length === 3;
+  })());
+  t('開くたびに届く新しいトークンでも、枠は増えない', (function () {
+    var dd = data(d4.token);
+    return dd.ok && data(dd.token).ok && devs().length === 3;
+  })());
+  FAKE.prop('DEVICE_MAX', '4');
+  t('上限はスクリプトプロパティで変えられる', lgDev('devE').ok && devs().length === 4, devs().length);
+
+  world();
+  var h1 = G.apiLogin_({ email: 'hanako@example.com', password: 'pass1', dev: 'h1' });
+  ['h2', 'h3', 'h4', 'h5'].forEach(function (x) { G.apiLogin_({ email: 'hanako@example.com', password: 'pass1', dev: x }); });
+  t('受講生（ご購入なし）には端末の制限が掛からない', h1.ok && data(h1.token).ok && devs().length === 0, devs().length);
+  var ad = G.apiLogin_({ email: 'admin@example.com', password: 'adm', dev: 'ad1' });
+  t('運営にも掛からない', ad.ok && data(ad.token).ok && devs().length === 0);
+  // 受講生が、ログインしたままあとから購入した場合
+  buy({ uid: 'uidHANA', product: 'L2' });
+  var hd = data(h1.token);
+  t('ログイン中の受講生があとから購入 → 次に開いたとき枠に入る', hd.ok && devs().length === 1 && data(hd.token).ok, devs());
+
+  // メールアドレスを登録しても、端末の枠は引き継がれる
+  world();
+  buy({ uid: 'uMV', product: 'L1' });
+  var mv = G.apiUidLogin_({ uid: 'uMV', dev: 'mv1' });
+  var su = G.apiAccountSetup_({ token: mv.token, email: 'mv@example.com', password: 'pw12', dev: 'mv1' });
+  t('メール登録のあとも、同じ端末でそのまま観られる', su.ok && data(su.token).ok && devs().length === 1
+    && devs()[0][0] === 'mv@example.com', [su, devs()]);
 
   document.getElementById('sum').textContent = G.VERSION + '／合格 ' + pass + '・不合格 ' + fail;
   document.getElementById('sum').className = fail ? 'ng' : 'ok';

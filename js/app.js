@@ -127,7 +127,7 @@
     api('data', { token: store.token(), uid: uid }).then(function (res) {
       if (view !== resumeView || key !== resumeStorageKey()) return;
       if (!res || !res.ok) {
-        if (res && (res.error === 'unauthorized' || res.error === 'stopped')) {
+        if (res && (res.error === 'unauthorized' || res.error === 'stopped' || res.error === 'device_limit')) {
           store.clear(); showLogin(RJ.errMsg(res)); return;
         }
         throw new Error('確認できませんでした。通信状態をご確認のうえ、もう一度お試しください。');
@@ -998,7 +998,7 @@
     api('data', { token: store.token(), uid: uid }, { quiet: shown })
       .then(function (res) {
         if (!res || !res.ok) {
-          if (res && (res.error === 'unauthorized' || res.error === 'stopped')) {
+          if (res && (res.error === 'unauthorized' || res.error === 'stopped' || res.error === 'device_limit')) {
             store.clear();
             try { localStorage.removeItem(dataCacheKey()); } catch (e) {}
             showLogin(RJ.errMsg(res));
