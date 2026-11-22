@@ -6,6 +6,7 @@
 
 出力先はこのフォルダの1つ上（＝リポジトリ直下）。
   start.html          はじめての方へ（初回登録のご案内）
+  start-online.html   凛穏オンライン講義 ご購入の方へ（決済後のご案内）
   guide.html          受講生さま向け 使い方ガイド
   manual-admin.html   運営の手順書
   manual-system.html  画面と仕組み
@@ -20,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _base import CSS, _mark   # noqa: E402
 import page_start              # noqa: E402
+import page_online             # noqa: E402
 import page_guide              # noqa: E402
 import page_admin              # noqa: E402
 import page_system             # noqa: E402
@@ -91,6 +93,7 @@ def hub():
 def main():
     files = [
         ("start.html", page_start.build()),
+        ("start-online.html", page_online.build()),
         ("guide.html", page_guide.build()),
         ("manual-admin.html", page_admin.build()),
         ("manual-system.html", page_system.build()),
