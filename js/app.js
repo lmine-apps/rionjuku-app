@@ -793,7 +793,86 @@
       });
   }
 
+  /**
+   * メールアドレスとパスワードのご登録（2026-11-20・常時販売）
+   *
+   * LINEからお入りになった方は、パスワードを決めなくてもすぐご覧いただけます。
+   * ただ、それだけだとパソコンや別の端末からは入れないので、起動のたびに一度だけお声がけします。
+   * 「あとで」で閉じられます。ご登録が済んだら二度と出ません。
+   */
+  var setupAsked = false;
+  function needSetup() {
+    var u = state.user || {};
+    return u.noMail === true || u.hasPass === false;   // 古い控えには印が無いので、はっきり分かるときだけ
+  }
+  function scheduleAccountSetup() {
+    if (SHOOTING || setupAsked || !needSetup()) return;
+    setupAsked = true;
+    (function wait(n) {
+      setTimeout(function () {
+        if ($('scApp').classList.contains('hidden') || !needSetup()) return;
+        // 使い方ガイドやお知らせが出ているあいだは待つ（重ねて出さない）
+        if (guideTimer || guideClose || document.querySelector('.modal')) { if (n < 80) wait(n + 1); return; }
+        showAccountSetup(true);
+      }, n ? 1500 : 2600);
+    })(0);
+  }
+  function showAccountSetup(auto) {
+    var u = state.user || {};
+    var needMail = (u.noMail === true), needPass = (u.hasPass === false);
+    if (!needMail && !needPass) return;
+    RJ.modal(needMail ? 'メールアドレスとパスワードのご登録' : 'パスワードのご登録',
+      '<p style="margin-top:0;font-size:14px">ご登録いただくと、<b>ホーム画面のアイコンから</b>すぐ開けるようになります。'
+      + 'LINEをたどらなくても、パソコンや別のスマートフォンからもご覧いただけます。</p>'
+      + (needMail
+        ? '<div class="field"><label>メールアドレス</label>'
+          + '<input id="asMail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"></div>'
+        : '<p class="hint" style="margin-top:0">ご登録のメールアドレス：' + esc(u.email) + '</p>')
+      + (needPass
+        ? '<div class="field"><label>パスワード（4文字以上）</label>'
+          + '<input id="asPass" type="password" autocomplete="new-password"></div>'
+          + '<div class="field"><label>もう一度入力してください</label>'
+          + '<input id="asPass2" type="password" autocomplete="new-password"></div>'
+          + '<div class="hint">覚えやすいもので大丈夫です。</div>'
+        : ''),
+      function (close, setMsg) {
+        var mail = needMail ? $('asMail').value.trim() : '';
+        var p1 = needPass ? $('asPass').value.trim() : '', p2 = needPass ? $('asPass2').value.trim() : '';
+        if (needMail && !mail) { setMsg('メールアドレスを入力してください。'); return; }
+        if (needPass && p1.length < 4) { setMsg('パスワードは4文字以上にしてください。'); return; }
+        if (needPass && p1 !== p2) { setMsg('パスワードが一致していません。'); return; }
+        return api('account_setup', { token: store.token(), email: mail, password: p1 }).then(function (res) {
+          if (!res || !res.ok) { setMsg(RJ.errMsg(res)); return; }
+          store.save(res.token, res.user);
+          state.user = res.user;
+          close();
+          // ご登録の直後が、ホーム画面に置いていただく一番よい機会（すでにアイコンから開いている方には出さない）
+          var inLine = /\bLine\//i.test(navigator.userAgent);
+          var thanks = '<p>次からは、<b>' + esc(res.user.email) + '</b> とパスワードでもお入りいただけます。</p>';
+          if (isStandalone()) {
+            RJ.modal('ご登録ありがとうございます',
+              thanks + '<p class="hint">凛穏塾のLINEからは、これまでどおり開くだけでご覧いただけます。</p>',
+              null, { cancelText: '閉じる' });
+          } else {
+            RJ.modal('ご登録ありがとうございます',
+              thanks + '<p>つづけて、<b>ホーム画面に凛穏塾のアイコン</b>を置いておきませんか。'
+              + '次からはLINEをたどらず、アイコンひとつで開けます。</p>'
+              + (inLine
+                ? '<p class="hint">いまはLINEの中で開いています。LINEの画面からは追加できないため、'
+                  + 'メニューから「ブラウザで開く」を選んでから、手順にお進みください。</p>'
+                : '')
+              + '<p class="hint">アイコンから開いた最初の一度だけ、いまのメールアドレスとパスワードでログインします。</p>',
+              function (closeThanks) { closeThanks(); showGuide(2, false); },
+              { saveText: '置き方を見る', cancelText: 'あとで' });
+          }
+          start();                    // 控えの見出し（メールアドレス）が変わるので、読み直す
+        });
+      }, { saveText: '登録する', cancelText: auto ? 'あとで' : 'キャンセル' });
+  }
+
   function editPassword() {
+    // まだパスワードをお決めでない方（LINEからお入りの方）は、ご登録の画面へ
+    if (needSetup()) { showAccountSetup(false); return; }
     RJ.modal('パスワードを変更',
       '<div class="field"><label>今のパスワード</label><input id="pfCur" type="password" autocomplete="current-password"></div>'
       + '<div class="field"><label>新しいパスワード（4文字以上）</label><input id="pfNew" type="password" autocomplete="new-password"></div>'
@@ -932,6 +1011,7 @@
         saveDataCache(res);
         migrateOldWatched();
         if (shown) reRender(); else renderApp();
+        scheduleAccountSetup();   // 控えを先に出したときは、最新の内容が届いてから判断する
       })
       .catch(function (e) { if (!shown) showLogin(e.message); });
   }
@@ -990,6 +1070,7 @@
     }
     // 起動ごとに一度だけ。スキップは次回も表示、非表示は本人が選んだときだけ。
     scheduleGuide();
+    scheduleAccountSetup();
   }
 
   /** 画面の切り替え */
@@ -1018,6 +1099,7 @@
         + (c.desc ? '<span class="pick-desc">' + esc(c.desc) + '</span>' : '')
         + '<span class="pick-meta">全' + pr.total + '本'
         + (pr.done ? '　視聴済み ' + pr.done + '本' : '') + '</span>'
+        + rightLine(c)
         + bar(pr)
         + '</button>';
     }).join('');
@@ -1102,6 +1184,7 @@
       (state.courses.length > 1
         ? '<button class="side-back" id="toPicker" type="button">← コースを変更</button>' : '')
       + '<h2 class="side-course">' + esc(c.name) + '</h2>'
+      + rightLine(c)
       + '<div class="side-progress" id="sideProgress">' + bar(courseProgress(c)) + '</div>'
       + '<div class="side-order">'
       + '<button class="ord' + (order() === 'new' ? ' on' : '') + '" data-ord="new" type="button">新しい順</button>'
@@ -1208,6 +1291,23 @@
     return '';
   }
 
+  /** 視聴権の期限が切れた方へのご案内（延長の入口） */
+  function extendHtml() {
+    return '<span>🔒 ご視聴期間が終了しました。</span>'
+      + (RJ.CFG.EXTEND_URL
+        ? '<a class="extend-btn" href="' + esc(RJ.CFG.EXTEND_URL) + '" target="_blank" rel="noopener">延長はこちら</a>'
+        : '<span class="extend-note">延長をご希望の方は、凛穏塾のLINEからお手続きいただけます。</span>');
+  }
+  /** コースの視聴期限を1行で（常時販売でお求めの方だけ。受講生には何も出ない） */
+  function rightLine(c) {
+    var r = c && c.right;
+    if (!r) return '';
+    if (!r.active) return '<span class="pick-right gone">ご視聴期間が終了しました（延長できます）</span>';
+    if (r.daysLeft == null) return '';
+    return '<span class="pick-right' + (r.daysLeft <= 14 ? ' soon' : '') + '">ご視聴期限：'
+      + esc(RJ.jpDate(r.endAt)) + 'まで（残り' + r.daysLeft + '日）</span>';
+  }
+
   function openVideo(i, resumeSeconds) {
     var item = state.flat[i];
     if (!item) return;
@@ -1227,7 +1327,9 @@
     var limit = $('vLimit');
     if (v.state !== 'open') {
       limit.className = 'limit-bar soon';
-      limit.textContent = lockLabel(v);
+      // 常時販売でお求めの方の期限切れは、延長の入口をいっしょに出す
+      if (v.state === 'expired' && v.byRight) { limit.className += ' extend'; limit.innerHTML = extendHtml(); }
+      else limit.textContent = lockLabel(v);
       limit.classList.remove('hidden');
     } else if (v.daysLeft != null) {
       limit.className = 'limit-bar' + (v.daysLeft <= 1 ? ' soon' : '');

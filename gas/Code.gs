@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.10.0
+ * VERSION: v1.12.0
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -9,6 +9,9 @@
  *
  * ★スプシは「リンクを知っている全員」共有をOFFにすること（パスワードが平文で入るため）。
  *
+ * v1.12.0 追加：常時販売（オンライン講義）。プロラインの決済から視聴権を発行し、
+ *               人ごとの視聴期限で出し分けます（中身は Setup_Rights.gs）。
+ *               LINEだけでご購入の方（メールアドレスが空の行）もお入りいただけるように
  * v1.10.0 追加：パスワードをお忘れの方が、LINE経由でご自身で決め直せるように
  *               （本人確認＝LINEのuid。運営がI列を空にする手作業は不要になりました）
  * v1.5.0 追加：視聴開始日／視聴期限（動画ごと）・お知らせ（宛先タグ・いいね・アンケート）
@@ -17,7 +20,7 @@
 
 // ===== 設定 =====
 // ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
-const VERSION = 'v1.11.0';
+const VERSION = 'v1.12.0';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -73,6 +76,11 @@ const N_COLS = 10;
 function doGet(e) {
   const p = (e && e.parameter) || {};
   if (p.action === 'ping') return out_({ ok: true, msg: 'pong', version: VERSION });
+  // プロラインの「外部プログラム」はGETで叩いてくるので、決済の受け口だけGETでも受けます
+  if (p.action === 'purchase') {
+    try { return out_(apiPurchase_(p)); }
+    catch (err) { return out_({ ok: false, error: 'server_error', detail: String(err && err.message || err) }); }
+  }
   return out_({ ok: false, error: 'post_only' });
 }
 
@@ -87,6 +95,8 @@ function doPost(e) {
       case 'first_password':return out_(apiFirstPassword_(p));
       case 'data':          return out_(apiData_(p));
       case 'profile_save':  return out_(apiProfileSave_(p));
+      case 'account_setup': return out_(apiAccountSetup_(p));
+      case 'purchase':      return out_(apiPurchase_(p));
       case 'line_link':     return out_(apiLineLink_(p));
       case 'news_like':     return out_(apiNewsLike_(p));
       case 'news_reply':    return out_(apiNewsReply_(p));
@@ -259,13 +269,23 @@ function students_() {
   const out = [];
   for (let i = 0; i < vals.length; i++) {
     const r = vals[i];
-    const mail = email_(r[S_MAIL - 1]);
-    if (!mail) continue;
+    let mail = email_(r[S_MAIL - 1]);
+    // ★メールアドレスが空でも、LINEのUIDがある行はお通しします（v1.12.0）。
+    //   LINEだけでご購入になった方です。内部では「仮のアドレス」で見分けます
+    //   （シートには書きません。ご本人がアドレスを登録されたら本物に替わります）。
+    //   メールもUIDも空の行は、これまでどおり無視します。
+    let noMail = false;
+    if (!mail) {
+      if (!s_(r[S_UID - 1])) continue;
+      mail = vmail_(r[S_UID - 1]);
+      noMail = true;
+    }
     const tg = tags_(r[S_TAGS - 1]);
     out.push({
       row: i + 2,
-      name: s_(r[S_NAME - 1]) || mail.split('@')[0],
+      name: s_(r[S_NAME - 1]) || (noMail ? 'お客さま' : mail.split('@')[0]),
       email: mail,
+      noMail: noMail,
       pass: String(r[S_PASS - 1] == null ? '' : r[S_PASS - 1]).trim(),
       tags: tg,
       admin: hasTag_(tg, 'admin'),
@@ -490,7 +510,9 @@ function apiUidLogin_(p) {
   if (!isOn_(on)) return { ok: false, error: 'quick_login_off' };
   const uid = s_(p.uid);
   if (!uid) return { ok: false, error: 'empty' };
-  const hit = students_().filter(function (s) { return s.uid && s.uid === uid; })[0];
+  const hits = students_().filter(function (s) { return s.uid && s.uid === uid; });
+  // 同じUIDが2行あるときは、メールアドレスのある行（＝本来のアカウント）を優先します
+  const hit = hits.filter(function (s) { return !s.noMail; })[0] || hits[0];
   if (!hit) return { ok: false, error: 'uid_not_found' };
   if (hit.stopped) return { ok: false, error: 'stopped' };
   logLogin_(hit, 'LINE');
@@ -600,7 +622,10 @@ function apiFirstPassword_(p) {
     writePass_(sh, u.row, np);
     // I列は「初回に設定した日」のままにしておきます（お忘れの再設定では触りません）
     if (mode === 'first') sh.getRange(u.row, S_FIRST).setValue(nowStr_());
-    if (s_(p.uid)) sh.getRange(u.row, S_UID).setValue(s_(p.uid));
+    if (s_(p.uid)) {
+      sh.getRange(u.row, S_UID).setValue(s_(p.uid));
+      absorbPlaceholder_(s_(p.uid), u.email);
+    }
 
     const fresh = findStudent_(mail) || u;
     logLogin_(fresh, mode === 'reset' ? 'パスワード再設定' : '初回設定');
@@ -609,12 +634,16 @@ function apiFirstPassword_(p) {
 }
 
 function userPayload_(u) {
-  return { name: u.name, email: u.email, tags: u.tags, admin: u.admin, uid: u.uid };
+  return { name: u.name, email: u.email, tags: u.tags, admin: u.admin, uid: u.uid,
+           // 画面が「メールアドレスとパスワードのご登録」をご案内するための印（v1.12.0）
+           noMail: !!u.noMail, hasPass: u.pass !== '' };
 }
 function saveUid_(u, uid) {
   try {
     if (!uid || u.uid === uid) return;
     studentSheet_().getRange(u.row, S_UID).setValue(uid);
+    // LINEだけでご購入 → あとから本来のアカウントでログイン、という方の仮の行を片づけます
+    if (!u.noMail) absorbPlaceholder_(uid, u.email);
   } catch (err) { /* 失敗しても本処理は続ける */ }
 }
 function logLogin_(u, how) {
@@ -635,6 +664,8 @@ function apiData_(p) {
 
   const cs = courses_();
   const vids = videos_();
+  // 常時販売でお求めの方の視聴権（タグごとの期限）。タグをお持ちの受講生には関係しません
+  const rights = u.admin ? {} : rightsFor_(u);
   const buckets = {};
   for (let i = 0; i < vids.length; i++) {
     const v = vids[i];
@@ -644,29 +675,46 @@ function apiData_(p) {
     // 動画のF列にタグがあればそれで判定（カンマ区切りで複数可＝どれか1つ持っていれば視聴可）。
     // 空欄ならコース設定のタグを継承する。
     const needs = v.tag ? tags_(v.tag) : [conf.tag];
-    if (!u.admin && !anyTag_(u.tags, needs)) continue;
+    // タグが無い方は、視聴権を見ます。期限が切れていても一覧には残し、再生だけ止めます
+    let right = null;
+    if (!u.admin && !anyTag_(u.tags, needs)) {
+      right = bestRight_(rights, needs);
+      if (!right) continue;
+    }
+    let vState = v.state, vEndAt = v.endAt, vDays = v.daysLeft;
+    if (right && vState === 'open') {
+      if (!right.active) {
+        vState = 'expired'; vEndAt = right.endAt; vDays = null;
+      } else if (right.daysLeft != null && (vDays == null || right.daysLeft < vDays)) {
+        vEndAt = right.endAt; vDays = right.daysLeft;
+      }
+    }
 
     if (!buckets[v.course]) {
       buckets[v.course] = { name: v.course, desc: conf.desc, order: conf.order,
-                            mark: '', chapters: {}, chapOrder: [] };
+                            mark: '', chapters: {}, chapOrder: [], right: null };
     }
     const b = buckets[v.course];
+    if (right && !b.right) {
+      b.right = { active: right.active, endAt: right.endAt, daysLeft: right.daysLeft };
+    }
     if (v.mark && !b.mark) b.mark = v.mark;   // コース一覧にも「更新!!」を出すため
     if (!b.chapters[v.chapter]) { b.chapters[v.chapter] = []; b.chapOrder.push(v.chapter); }
     b.chapters[v.chapter].push({
       id: v.row,
       title: v.title,
       // 公開前・期限切れの動画URLはブラウザへ渡さない
-      url: (v.state === 'open') ? v.url : '',
+      url: (vState === 'open') ? v.url : '',
       note: v.note,
       blocks: v.blocks,
       mark: v.mark,
       hint: v.hint,
-      state: v.state,
+      state: vState,
       startAt: v.startAt,
-      endAt: v.endAt,
-      daysLeft: v.daysLeft,
-      hidden: v.hidden
+      endAt: vEndAt,
+      daysLeft: vDays,
+      hidden: v.hidden,
+      byRight: !!right      // 視聴権で観ている動画（期限切れのとき「延長はこちら」を出す印）
     });
   }
 
@@ -674,7 +722,7 @@ function apiData_(p) {
     .sort(function (a, b) { return a.order - b.order; })
     .map(function (b) {
       return {
-        name: b.name, desc: b.desc, mark: b.mark,
+        name: b.name, desc: b.desc, mark: b.mark, right: b.right,
         chapters: b.chapOrder.map(function (cn) { return { name: cn, videos: b.chapters[cn] }; })
       };
     });
@@ -715,7 +763,8 @@ function apiData_(p) {
     token: makeToken_(u),
     user: userPayload_(u),
     courses: courseList,
-    news: newsForUser_(u),
+    // お知らせの宛先は、いま有効な視聴権のタグも見ます（ご購入の方だけに届けられるように）
+    news: newsForUser_(withRightTags_(u, rights)),
     myReplies: myReplies_(u),
     watched: mine,
     watchCounts: counts,
@@ -835,6 +884,7 @@ function apiAdminData_(p) {
         return {
           row: s.row, name: s.name, email: s.email, pass: s.pass, tags: s.tags.join(','),
           status: s.status, memo: s.memo, joined: s.joined, uid: s.uid, firstSet: s.firstSet,
+          noMail: !!s.noMail,
           watched: w.done, watchTotal: w.total, watchRate: w.rate
         };
       });

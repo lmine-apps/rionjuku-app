@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>常時販売（視聴権）のテスト</title>
+<style>
+  body { font: 14px/1.7 system-ui, sans-serif; margin: 24px; }
+  .ok { color: #1f7a5c; } .ng { color: #c0503f; font-weight: 700; }
+  #sum { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<h1>常時販売（視聴権）のテスト</h1>
+<p>GAS（gas/Code.gs ＋ gas/Setup_Rights.gs）を、にせもののスプレッドシートの上で実際に動かします。本番には一切つながりません。</p>
+<div id="sum">実行中…</div>
+<div id="log"></div>
+<script>
+/* ===== にせもののGAS環境 ===== */
+(function (w) {
+  var book = {};          // シート名 → 2次元配列
+  var order = [];
+  var props = {};
+  function Sheet(name) { this.name = name; this.rows = []; }
+  Sheet.prototype.getLastRow = function () {
+    for (var i = this.rows.length - 1; i >= 0; i--) {
+      if (this.rows[i].some(function (c) { return c !== '' && c != null; })) return i + 1;
+    }
+    return 0;
+  };
+  Sheet.prototype.getLastColumn = function () {
+    var m = 0;
+    this.rows.forEach(function (r) { for (var i = r.length - 1; i >= 0; i--) { if (r[i] !== '' && r[i] != null) { if (i + 1 > m) m = i + 1; break; } } });
+    return m;
+  };
+  Sheet.prototype.getMaxRows = function () { return Math.max(this.rows.length, 1000); };
+  Sheet.prototype.appendRow = function (vals) { this.rows[this.getLastRow()] = vals.slice(); };
+  Sheet.prototype.setFrozenRows = function () {};
+  Sheet.prototype.setColumnWidth = function () {};
+  Sheet.prototype.deleteRows = function (from, n) { this.rows.splice(from - 1, n); };
+  Sheet.prototype.getRange = function (r, c, nr, nc) {
+    var sh = this; nr = nr || 1; nc = nc || 1;
+    var range = {
+      getValues: function () {
+        var out = [];
+        for (var i = 0; i < nr; i++) {
+          var row = [];
+          for (var j = 0; j < nc; j++) {
+            var v = (sh.rows[r - 1 + i] || [])[c - 1 + j];
+            row.push(v == null ? '' : v);
+          }
+          out.push(row);
+        }
+        return out;
+      },
+      getValue: function () { return range.getValues()[0][0]; },
+      setValues: function (vals) {
+        for (var i = 0; i < vals.length; i++) {
+          while (sh.rows.length < r + i) sh.rows.push([]);
+          for (var j = 0; j < vals[i].length; j++) {
+            var row = sh.rows[r - 1 + i];
+            while (row.length < c + j) row.push('');
+            row[c - 1 + j] = vals[i][j];
+          }
+        }
+        return range;
+      },
+      setValue: function (v) { return range.setValues([[v]]); },
+      setNumberFormat: function () { return range; },
+      setFontWeight: function () { return range; },
+      setBackground: function (col) { sh.bg = sh.bg || {}; sh.bg[r] = col; return range; },
+      setNote: function () { return range; }
+    };
+    return range;
+  };
+  var ss = {
+    getSheetByName: function (n) { return book[n] || null; },
+    getSheets: function () { return order.map(function (n) { return book[n]; }); },
+    insertSheet: function (n) { book[n] = new Sheet(n); order.push(n); return book[n]; }
+  };
+  w.SpreadsheetApp = { openById: function () { return ss; } };
+  w.PropertiesService = { getScriptProperties: function () {
+    return { getProperty: function (k) { return props[k] == null ? null : props[k]; },
+             setProperty: function (k, v) { props[k] = v; } };
+  } };
+  w.LockService = { getScriptLock: function () { return { waitLock: function () {}, releaseLock: function () {} }; } };
+  var cache = {};
+  w.CacheService = { getScriptCache: function () {
+    return { get: function (k) { return cache[k] || null; }, put: function (k, v) { cache[k] = v; }, remove: function (k) { delete cache[k]; } };
+  } };
+  w.ContentService = { MimeType: { JSON: 'json' }, createTextOutput: function (t) {
+    return { setMimeType: function () { return { body: t }; } };
+  } };
+  w.Logger = { log: function () {} };
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function bytes(str) { return Array.prototype.slice.call(new TextEncoder().encode(str)); }
+  w.Utilities = {
+    formatDate: function (d, tz, f) {
+      return f.replace('yyyy', d.getFullYear()).replace('MM', pad(d.getMonth() + 1)).replace('dd', pad(d.getDate()))
+              .replace('HH', pad(d.getHours())).replace('mm', pad(d.getMinutes())).replace('ss', pad(d.getSeconds()));
+    },
+    getUuid: function () { return 'uuid-' + Math.random().toString(16).slice(2); },
+    newBlob: function (x) {
+      var b = (typeof x === 'string') ? bytes(x) : x;
+      return { getBytes: function () { return b; }, getDataAsString: function () { return new TextDecoder().decode(new Uint8Array(b)); } };
+    },
+    base64EncodeWebSafe: function (b) {
+      return btoa(String.fromCharCode.apply(null, b)).replace(/\+/g, '-').replace(/\//g, '_');
+    },
+    base64DecodeWebSafe: function (s) {
+      s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '=';
+      return Array.prototype.map.call(atob(s), function (c) { return c.charCodeAt(0); });
+    },
+    computeHmacSha256Signature: function (text, key) {   // 本物の署名ではない（テストで一貫していれば足りる）
+      var h = 7, src = key + '|' + text;
+      for (var i = 0; i < src.length; i++) h = (h * 31 + src.charCodeAt(i)) >>> 0;
+      return [h & 255, (h >> 8) & 255, (h >> 16) & 255, (h >> 24) & 255];
+    }
+  };
+  w.FAKE = {
+    reset: function () { book = {}; order = []; props = {}; cache = {}; },
+    sheet: function (n, rows) { var s = ss.insertSheet(n); s.rows = rows.map(function (r) { return r.slice(); }); return s; },
+    get: function (n) { return book[n]; },
+    prop: function (k, v) { props[k] = v; }
+  };
+})(window);
+</script>
+<script>
+(async function () {
+  var log = document.getElementById('log'), pass = 0, fail = 0;
+  function t(name, cond, extra) {
+    if (cond) pass++; else fail++;
+    var p = document.createElement('div');
+    p.className = cond ? 'ok' : 'ng';
+    p.textContent = (cond ? '✓ ' : '✗ ') + name + (cond || extra == null ? '' : ' → ' + JSON.stringify(extra));
+    log.appendChild(p);
+  }
+  var src = '';
+  for (var f of ['../gas/Code.gs', '../gas/Setup_Rights.gs']) {
+    src += await (await fetch(f + '?cb=' + Date.now())).text() + '\n';
+  }
+  // 関数はグローバルに、定数は同じ評価の中に置く（.gs 2本を1つにつなげて読む）
+  src += '\nwindow.__api = { apiPurchase_: apiPurchase_, apiData_: apiData_, apiUidLogin_: apiUidLogin_, apiLogin_: apiLogin_,'
+       + ' apiAccountSetup_: apiAccountSetup_, students_: students_, rightsAll_: rightsAll_, setupRights: setupRights,'
+       + ' doGet: doGet, VERSION: VERSION, ymd_: ymd_ };';
+  (0, eval)(src);
+  var G = window.__api;
+
+  function day(n) { var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+  function ymd(n) { return G.ymd_(day(n)); }
+
+  function world() {
+    FAKE.reset();
+    FAKE.sheet('動画一覧', [
+      ['コース名', 'チャプター', 'タイトル', 'URL', '補足', '目印', 'ひとこと', 'タグ', '視聴開始', '視聴終了', '非公開', '追加'],
+      ['凛穏塾2期生', '講義', '第1回', 'https://vimeo.com/111', '', '', '', '', '', '', '', ''],
+      ['基礎講義コース', 'LEVEL1', '500人講義', 'https://vimeo.com/222', '', '', '', '', '', '', '', ''],
+      ['実践講義コース', 'LEVEL2', '第1講', 'https://vimeo.com/333', '', '', '', '', '', '', '', ''],
+      ['', '', '第2講（動画側の期限3日）', 'https://vimeo.com/444', '', '', '', '', '', ymd(3), '', '']
+    ]);
+    FAKE.sheet('コース設定', [
+      ['コース名', 'タグ', '並び順', '公開', '説明'],
+      ['凛穏塾2期生', '2期生', 10, '公開', ''],
+      ['基礎講義コース', '基礎講義', 20, '公開', ''],
+      ['実践講義コース', '実践講義', 30, '公開', '']
+    ]);
+    FAKE.sheet('閲覧者一覧', [
+      ['名前', 'メールアドレス', 'パスワード', 'タグ', '状態', 'メモ', '登録日', 'LINE UID', '初回設定'],
+      ['既存 花子', 'hanako@example.com', 'pass1', '2期生', '有効', '', '2026-08-01', 'uidHANA', '2026-08-02'],
+      ['既存 次郎', 'jiro@example.com', 'pass2', '2期生', '有効', '', '2026-08-01', '', '2026-08-02'],
+      ['運営', 'admin@example.com', 'adm', 'admin', '有効', '', '', '', 'x']
+    ]);
+    FAKE.sheet('お知らせ', [['id', '日付', '見出し', '本文', '画像URL', '宛先タグ', '選択肢', '公開', 'ポップ', 'いいね'],
+      ['1', ymd(0), 'ご購入の方へ', '本文', '', '基礎講義', '', '公開', '', 0]]);
+    FAKE.prop('LINE_QUICK_LOGIN', 'on');
+    FAKE.prop('PURCHASE_SECRET', 'sec');
+    G.setupRights();
+  }
+  function buy(o) { return G.apiPurchase_(Object.assign({ secret: 'sec' }, o)); }
+  function loginUid(uid) { return G.apiUidLogin_({ uid: uid }); }
+  function data(token) { return G.apiData_({ token: token }); }
+  function course(res, name) { return (res.courses || []).filter(function (c) { return c.name === name; })[0]; }
+  function rights() { return FAKE.get('視聴権').rows.slice(1).filter(function (r) { return r && r.length; }); }
+  function backdate(rowIdx, days) {   // 視聴権の行を「days日前に買った」ことにする
+    var r = FAKE.get('視聴権').rows[rowIdx];
+    r[0] = new Date(Date.now() - days * 86400000); r[6] = day(-days);
+  }
+
+  /* ---------- 合言葉 ---------- */
+  world();
+  t('合言葉ちがいは断る', G.apiPurchase_({ secret: 'x', uid: 'u1', product: 'L1' }).error === 'bad_secret');
+  FAKE.prop('PURCHASE_SECRET', '');
+  t('合言葉が未設定のあいだは、空の合言葉でも断る', G.apiPurchase_({ secret: '', uid: 'u1', product: 'L1' }).error === 'bad_secret');
+  world();
+  t('GET（プロラインの外部プログラム）でも受ける',
+    JSON.parse(G.doGet({ parameter: { action: 'purchase', secret: 'sec', uid: 'uGET', product: 'L1' } }).body).ok === true);
+
+  /* ---------- 新しいお客さま（LINEだけ） ---------- */
+  world();
+  var r1 = buy({ uid: 'uNEW', product: 'L1-TRIAL', name: 'あたらしい方' });
+  t('購入で視聴権が出る', r1.ok && r1.end === ymd(90), r1);
+  t('名簿に1行足される（タグは空）', (function () {
+    var s = G.students_().filter(function (x) { return x.uid === 'uNEW'; })[0];
+    return s && s.noMail && s.tags.length === 0 && s.name === 'あたらしい方';
+  })());
+  var lg = loginUid('uNEW');
+  t('LINEから開くだけで入れる', lg.ok && lg.user.noMail === true && lg.user.hasPass === false, lg);
+  var d1 = data(lg.token);
+  t('買ったコースだけ見える', d1.ok && d1.courses.length === 1 && d1.courses[0].name === '基礎講義コース', d1.courses && d1.courses.map(function (c) { return c.name; }));
+  t('URLが渡り、期限と残り日数が付く', (function () {
+    var v = d1.courses[0].chapters[0].videos[0];
+    return v.url && v.state === 'open' && v.byRight === true && v.daysLeft >= 90 && v.daysLeft <= 91 && d1.courses[0].right.active;
+  })(), d1.courses[0]);
+  t('視聴権のタグ宛てのお知らせが届く', d1.news.length === 1);
+
+  /* ---------- 二重発行の防止 ---------- */
+  var before = rights().length;
+  var r2 = buy({ uid: 'uNEW', product: 'L1-TRIAL' });
+  t('続けて届いた同じ知らせは1回ぶん', r2.ok && r2.dup === true && rights().length === before, r2);
+
+  /* ---------- 延長 ---------- */
+  backdate(1, 30);                                   // 30日前に買ったことにする → 期限は今日+60
+  FAKE.get('視聴権').rows[1][7] = day(60);
+  var r3 = buy({ uid: 'uNEW', product: 'L1-TRIAL' });
+  t('同じ商品の再購入は、前の期限の続きから延びる', r3.ok && r3.extended && r3.end === ymd(150), r3);
+  var r4 = buy({ uid: 'uNEW', product: 'L1', order: 'ord-1' });
+  t('別の商品は今日から数える', r4.ok && !r4.extended && r4.end === ymd(365), r4);
+  var r4b = buy({ uid: 'uNEW', product: 'L1', order: 'ord-1' });
+  t('注文番号が同じなら二重に出さない', r4b.dup === true);
+  var d2 = data(lg.token);
+  t('同じタグは長いほうの期限が残る', (function () {
+    var dl = d2.courses[0].right.daysLeft; return dl >= 365 && dl <= 366;
+  })(), d2.courses[0].right);
+
+  /* ---------- 期限切れ ---------- */
+  world();
+  buy({ uid: 'uOLD', product: 'L1-TRIAL' });
+  backdate(1, 100); FAKE.get('視聴権').rows[1][7] = day(-10);
+  var lo = loginUid('uOLD'), d3 = data(lo.token);
+  t('期限切れでも一覧には残る', d3.courses.length === 1);
+  t('期限切れはURLを渡さず、延長の印が付く', (function () {
+    var v = d3.courses[0].chapters[0].videos[0];
+    return v.url === '' && v.state === 'expired' && v.byRight === true && d3.courses[0].right.active === false;
+  })(), d3.courses[0]);
+  t('期限切れの方には、購入者宛てのお知らせを出さない', d3.news.length === 0);
+  var r5 = buy({ uid: 'uOLD', product: 'L1-TRIAL' });
+  t('切れたあとの再購入は今日から', r5.ok && !r5.extended && r5.end === ymd(90), r5);
+  t('再購入でまた観られる', data(lo.token).courses[0].chapters[0].videos[0].url !== '');
+
+  /* ---------- セット ---------- */
+  world();
+  buy({ uid: 'uSET', product: 'SET' });
+  var ls = loginUid('uSET'), d4 = data(ls.token);
+  t('セットは2コースとも見える', d4.courses.length === 2, d4.courses.map(function (c) { return c.name; }));
+  t('動画側の期限が短ければ、そちらが優先される', (function () {
+    var v = course(d4, '実践講義コース').chapters[0].videos[1];
+    return v.daysLeft >= 3 && v.daysLeft <= 4;
+  })());
+
+  /* ---------- 知らない商品 ---------- */
+  world();
+  var r6 = buy({ uid: 'uX', product: 'NAZO' });
+  t('知らない商品コードは視聴権を出さず、赤い行で残す', r6.error === 'unknown_product' && rights().length === 1
+    && FAKE.get('視聴権').bg && FAKE.get('視聴権').bg[2] === '#fde2e2' && G.students_().every(function (s) { return s.uid !== 'uX'; }), r6);
+  t('[[uid]] が置き換わらずに届いたら断る', buy({ uid: '[[uid]]', product: 'L1' }).error === 'no_identity');
+
+  /* ---------- 既存の受講生が買う ---------- */
+  world();
+  var n0 = G.students_().length;
+  buy({ uid: 'uidHANA', product: 'L2' });
+  t('LINE連携ずみの受講生は、名簿に行が増えない', G.students_().length === n0);
+  var lh = loginUid('uidHANA'), d5 = data(lh.token);
+  t('もとのコースと買ったコースの両方が見える', d5.courses.length === 2 && !!course(d5, '凛穏塾2期生') && !!course(d5, '実践講義コース'));
+  t('もとのコース（タグ）には期限の印が付かない', course(d5, '凛穏塾2期生').right === null
+    && course(d5, '凛穏塾2期生').chapters[0].videos[0].byRight === false);
+
+  /* ---------- 既存の受講生が、未連携のLINEで買う → あとで本来のアカウントでログイン ---------- */
+  world();
+  buy({ uid: 'uJIRO', product: 'L1' });
+  t('未連携だと、いったん仮の行ができる', G.students_().filter(function (s) { return s.uid === 'uJIRO' && s.noMail; }).length === 1);
+  var lj = G.apiLogin_({ email: 'jiro@example.com', password: 'pass2', uid: 'uJIRO' });
+  t('本来のアカウントでログインできる', lj.ok, lj);
+  t('仮の行は片づき、UIDは本来の行へ移る', (function () {
+    var hits = G.students_().filter(function (s) { return s.uid === 'uJIRO'; });
+    return hits.length === 1 && hits[0].email === 'jiro@example.com';
+  })());
+  var d6 = data(lj.token);
+  t('視聴権は本来のアカウントで観られる', d6.courses.length === 2 && !!course(d6, '基礎講義コース'));
+  t('以後はLINEから本来のアカウントに入る', loginUid('uJIRO').user.email === 'jiro@example.com');
+
+  /* ---------- メールアドレスとパスワードのご登録 ---------- */
+  world();
+  buy({ uid: 'uREG', product: 'L1' });
+  var lr = loginUid('uREG');
+  t('すでにあるアドレスは受けない', G.apiAccountSetup_({ token: lr.token, email: 'hanako@example.com', password: 'abcd' }).error === 'email_exists');
+  t('形のおかしいアドレスは受けない', G.apiAccountSetup_({ token: lr.token, email: 'abc', password: 'abcd' }).error === 'bad_email');
+  t('短いパスワードは受けない', G.apiAccountSetup_({ token: lr.token, email: 'reg@example.com', password: 'abc' }).error === 'password_too_short');
+  var rs = G.apiAccountSetup_({ token: lr.token, email: 'Reg@Example.com', password: 'abcd' });
+  t('登録できる', rs.ok && rs.user.email === 'reg@example.com' && rs.user.noMail === false && rs.user.hasPass === true, rs);
+  t('古いトークンはもう通らない（仮のアドレスが消えるため）', data(lr.token).ok === false);
+  var d7 = data(rs.token);
+  t('新しいトークンで、視聴権がそのまま観られる', d7.ok && d7.courses.length === 1);
+  t('メールとパスワードでログインできる', G.apiLogin_({ email: 'reg@example.com', password: 'abcd' }).ok === true);
+  t('LINEからも引きつづき入れる', loginUid('uREG').user.email === 'reg@example.com');
+  t('視聴権シートのメール欄も埋まる', rights()[0][2] === 'reg@example.com');
+  t('二度目の登録はできない', G.apiAccountSetup_({ token: rs.token, password: 'zzzz' }).error === 'already_set');
+
+  /* ---------- メールアドレスだけで届く購入（将来のStripe直販） ---------- */
+  world();
+  var r7 = buy({ email: 'direct@example.com', product: 'L1', name: 'ちょくはん', from: 'Stripe' });
+  t('メールだけでも視聴権が出て、名簿に入る', r7.ok && r7.newcomer === true
+    && G.students_().some(function (s) { return s.email === 'direct@example.com' && !s.noMail && s.pass === ''; }), r7);
+
+  /* ---------- これまでの受講生に影響しないこと ---------- */
+  world();
+  var la = G.apiLogin_({ email: 'hanako@example.com', password: 'pass1' }), d8 = data(la.token);
+  t('受講生はこれまでどおり（自分のコースだけ・印なし）', d8.ok && d8.courses.length === 1 && d8.courses[0].right === null
+    && d8.user.noMail === false && d8.user.hasPass === true);
+  t('購入者宛てのお知らせは、受講生には出ない', d8.news.length === 0);
+  var ad = data(G.apiLogin_({ email: 'admin@example.com', password: 'adm' }).token);
+  t('運営は全コースが見える', ad.courses.length === 3);
+  t('メールもUIDも空の行は無視される', (function () {
+    FAKE.get('閲覧者一覧').rows.push(['空の人', '', '', '2期生', '', '', '', '', '']);
+    return G.students_().every(function (s) { return s.name !== '空の人'; });
+  })());
+
+  document.getElementById('sum').textContent = G.VERSION + '／合格 ' + pass + '・不合格 ' + fail;
+  document.getElementById('sum').className = fail ? 'ng' : 'ok';
+  window.__result = { pass: pass, fail: fail };
+})().catch(function (e) {
+  document.getElementById('sum').textContent = 'テストが途中で止まりました：' + (e && e.stack || e);
+  document.getElementById('sum').className = 'ng';
+  window.__result = { error: String(e && e.stack || e) };
+});
+</script>
+</body>
+</html>

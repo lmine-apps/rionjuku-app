@@ -27,10 +27,28 @@
     { row: 8,  course: '卒業生サロン', chapter: '質問交流会', title: '第８回（2026年8月1日）', url: 'https://vimeo.com/1215034887', note: '0:01:33　本物の見抜き方\n0:11:16　とあるエピソード', tag: '', hidden: false, start: '', end: '' },
     { row: 9,  course: '凛穏塾2期生', chapter: '講義動画', title: '入学式＆第１回講義', url: 'https://vimeo.com/1129083086', note: '', tag: '', hidden: false, start: '', end: '' }
   ];
+  // ── 常時販売（オンライン講義）のデモ ──
+  // ?mock=1&right=active|soon|expired|new で、ご購入者としての見え方を確かめられる。
+  //   active … 視聴権あり／soon … 残り10日／expired … 期限切れ（延長の入口）
+  //   new    … LINEだけでご購入（メールアドレスもパスワードも未登録）
+  var RIGHT_DEMO = (location.search.match(/[?&]right=(\w+)/) || [])[1] || '';
+  if (RIGHT_DEMO) {
+    VIDEOS.push(
+      { row: 60, course: '人生を変える基礎講義', chapter: 'LEVEL1 基礎講義', title: '伝説の500人講義', url: 'https://vimeo.com/1119403217', note: '', tag: '', hidden: false, start: '', end: '' },
+      { row: 61, course: '人生を変える基礎講義', chapter: 'LEVEL1 基礎講義', title: '補足ボイス', url: 'assets/demo-voice.wav', note: '', tag: '', hidden: false, start: '', end: '' }
+    );
+  }
+  function mockRight(tag) {
+    if (!RIGHT_DEMO || tag !== '基礎講義') return null;
+    var days = RIGHT_DEMO === 'expired' ? -2 : (RIGHT_DEMO === 'soon' ? 10 : 300);
+    return { active: days >= 0, endAt: d(days) + ' 23:59', daysLeft: days >= 0 ? days + 1 : null };
+  }
+
   var COURSES = [
     { row: 2, name: '凛穏塾2.5期生', tag: '凛穏塾2.5期生', order: 10, published: true, desc: '2.5期生の講義アーカイブです。' },
     { row: 3, name: '凛穏塾2期生',   tag: '凛穏塾2期生',   order: 20, published: true, desc: '' },
-    { row: 4, name: '卒業生サロン',   tag: '卒業生サロン',   order: 30, published: true, desc: '卒業生サロン限定の講義です。' }
+    { row: 4, name: '卒業生サロン',   tag: '卒業生サロン',   order: 30, published: true, desc: '卒業生サロン限定の講義です。' },
+    { row: 5, name: '人生を変える基礎講義', tag: '基礎講義', order: 5, published: true, desc: '通称「伝説の500人講義」です。' }
   ];
   var STUDENTS = [
     { row: 2, name: 'デモ 受講生', email: 'demo@example.com',  pass: 'demo', tags: '凛穏塾2.5期生,卒業生サロン', status: '有効', memo: 'デモ用', joined: '2026-08-17', uid: '' },
@@ -88,29 +106,39 @@
     var s = STUDENTS.filter(function (x) { return x.email === mail; })[0];
     if (!s) return null;
     var tags = s.tags.split(',').map(function (t) { return t.trim(); }).filter(String);
-    return { name: s.name, email: s.email, tags: tags, admin: tags.indexOf('admin') >= 0, uid: s.uid };
+    var fresh = (RIGHT_DEMO === 'new' && s.email === 'demo@example.com' && !s.setupDone);
+    return { name: s.name, email: s.email, tags: tags, admin: tags.indexOf('admin') >= 0, uid: s.uid,
+             noMail: fresh, hasPass: !fresh };
   }
 
   function buildCourses(u) {
     var out = [];
     COURSES.forEach(function (c) {
-      if (!u.admin && u.tags.indexOf(c.tag) < 0) return;
+      var right = null;
+      if (!u.admin && u.tags.indexOf(c.tag) < 0) {
+        right = mockRight(c.tag);
+        if (!right) return;
+      }
       var chaps = [];
       VIDEOS.filter(function (v) { return v.course === c.name; }).forEach(function (v) {
         var win = windowState(v.start, v.end);
+        if (right && win.state === 'open') {
+          if (!right.active) { win.state = 'expired'; win.endAt = right.endAt; win.daysLeft = null; }
+          else { win.endAt = right.endAt; win.daysLeft = right.daysLeft; }
+        }
         var ch = chaps.filter(function (x) { return x.name === v.chapter; })[0];
         if (!ch) { ch = { name: v.chapter, videos: [] }; chaps.push(ch); }
         ch.videos.push({
           id: v.row, title: v.title, url: (win.state === 'open') ? v.url : '',
           note: v.note, blocks: v.blocks || '', mark: v.mark || '', hint: v.hint || '',
           state: win.state, startAt: win.startAt, endAt: win.endAt,
-          daysLeft: win.daysLeft, hidden: v.hidden
+          daysLeft: win.daysLeft, hidden: v.hidden, byRight: !!right
         });
       });
       if (chaps.length) {
         var cm = '';
         chaps.forEach(function (ch) { ch.videos.forEach(function (x) { if (x.mark && !cm) cm = x.mark; }); });
-        out.push({ name: c.name, desc: c.desc, mark: cm, chapters: chaps });
+        out.push({ name: c.name, desc: c.desc, mark: cm, chapters: chaps, right: right });
       }
     });
     return out;
@@ -186,6 +214,13 @@
             watchCounts: { 2: 23, 3: 11, 4: 7, 45: 5 },
             myReplies: me.email === 'demo@example.com' ? {} : {}
           });
+          return;
+        }
+        if (action === 'account_setup') {
+          var srow = STUDENTS.filter(function (x) { return x.email === me.email; })[0];
+          if (String(p.email || '').toLowerCase() === 'hanako@example.com') { resolve({ ok: false, error: 'email_exists' }); return; }
+          srow.setupDone = true;
+          resolve({ ok: true, token: 'mock:' + me.email, user: user(me.email) });
           return;
         }
         if (action === 'profile_save') {

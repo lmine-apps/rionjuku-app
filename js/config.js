@@ -23,6 +23,12 @@ window.RJ_CONFIG = {
   // 空にすると、メニューの項目そのものが出なくなります。
   LINE_LINK_URL: 'https://mka0tn6z.autosns.app/addfriend/s/IxaQFqNy6W/@129snyzr',
 
+  // ── 常時販売（オンライン講義）──────────────────────────
+  // 視聴期間が終わった方にお出しする「延長はこちら」の行き先。
+  // プロラインのステップ着火URL（押すとLINEが開き、延長のご案内が届く）を入れます。
+  // 空のあいだはボタンを出さず、「LINEからお手続きいただけます」の一文だけになります。
+  EXTEND_URL: '',
+
   // ── Webプッシュ通知（Firebase Cloud Messaging）──────────
   // 下の FIREBASE と VAPID_KEY を埋めてから PUSH_READY を true にする。
   PUSH_READY: true,
