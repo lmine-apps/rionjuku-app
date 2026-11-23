@@ -374,6 +374,11 @@ td code { background: transparent; padding: 0; }
   .phone { width: 280px; }
 }
 
+.pc { text-align: left; background: var(--card-soft); border: 1px solid var(--line);
+  border-radius: 13px; padding: 13px 16px; margin: 14px 0 0; }
+.pc__t { font-size: 13px; font-weight: 700; color: var(--sky); letter-spacing: .04em; margin: 0 0 4px; }
+.pc__d { font-size: 12.5px; line-height: 1.75; color: var(--ink-soft); margin: 0 0 8px; }
+.pc .url { font-size: 13px; color: var(--ink); user-select: all; }
 .rule { background: var(--card); border: 1px solid var(--line); border-radius: 13px;
   padding: 4px 18px; margin: 16px 0 0; }
 .rule__r { display: grid; grid-template-columns: 6.2em 1fr; gap: 12px; padding: 13px 0;
@@ -401,7 +406,11 @@ td code { background: transparent; padding: 0; }
   <p class="hero__time">LINEから開けば、パスワードの入力はいりません</p>
   <a class="go" id="go" href="index.html">&#9654;&nbsp; 講義をひらく
     <small>スマートフォンのままで大丈夫です</small></a>
-  <p class="url">https://apps.l-mine.com/rionjuku-app/</p>
+  <div class="pc">
+    <p class="pc__t">パソコンでご覧になる方へ</p>
+    <p class="pc__d">パソコンで下のURLをひらき、ご登録のメールアドレスとパスワードでログインしてください。<br>ご登録がまだの方は、先にスマートフォンで上のボタンからお入りいただき、ご登録をお済ませください（下の手順②）。</p>
+    <p class="url">https://apps.l-mine.com/rionjuku-app/</p>
+  </div>
 </div></div>
 
 <main class="wrap" style="padding-top:26px">
