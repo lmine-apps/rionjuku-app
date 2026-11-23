@@ -36,7 +36,8 @@ window.RJ_CONFIG = {
 
   // 講義の追加購入（凛穏オンライン講義をお求めの方に、まだお持ちでない講義をご案内する）
   //   PD_BASE  … プロラインの決済ページ。うしろに商品ごとの番号と ?uid= を付けて開く
-  //   LINE_URL … uidが分からない方をLINEへご案内する、プロラインの自作ページのURL（uidなしで開くとLINEログインを経てuidが付く）。
+  //   LINE_URL … uidが分からない方をLINEへご案内する、プロラインの「追加購入」ステップの着火URL。
+  //              押すとLINEが開き、購入画面へのリンク（自作ページ cp/Wp03yv6zuG?uid=[[uid]]）が届く。
   //              届くメッセージのボタンには、次のURLを登録する：
   //                https://apps.l-mine.com/rionjuku-app/?uid=[[uid]]&open=buy
   //              空のあいだは「公式LINEからお手続きください」の一文だけになる
@@ -44,7 +45,7 @@ window.RJ_CONFIG = {
   //   PRODUCTS … course は「コース設定」のコース名と同じにする（お持ちかどうかの見分けに使う）
   BUY: {
     PD_BASE: 'https://mka0tn6z.autosns.app/pd/',
-    LINE_URL: 'https://mka0tn6z.autosns.app/cp/Wp03yv6zuG',
+    LINE_URL: 'https://mka0tn6z.autosns.app/addfriend/s/AbIdhLEjBQ/@129snyzr',
     VIA_LINE: false,
     PRODUCTS: [
       { code: 'L1', course: '凛穏オンライン講義 LEVEL1', name: 'LEVEL1　伝説の500人講義', desc: '伝説の500人講義', price: 8800, term: '1年', pd: 'ZJxf9jukgv' },
