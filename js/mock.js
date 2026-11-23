@@ -34,8 +34,8 @@
   var RIGHT_DEMO = (location.search.match(/[?&]right=(\w+)/) || [])[1] || '';
   if (RIGHT_DEMO) {
     VIDEOS.push(
-      { row: 60, course: '人生を変える基礎講義', chapter: 'LEVEL1 基礎講義', title: '伝説の500人講義', url: 'https://vimeo.com/1119403217', note: '', tag: '', hidden: false, start: '', end: '' },
-      { row: 61, course: '人生を変える基礎講義', chapter: 'LEVEL1 基礎講義', title: '補足ボイス', url: 'assets/demo-voice.wav', note: '', tag: '', hidden: false, start: '', end: '' }
+      { row: 60, course: '凛穏オンライン講義 LEVEL1', chapter: 'LEVEL1 基礎講義', title: '伝説の500人講義', url: 'https://vimeo.com/1119403217', note: '', tag: '', hidden: false, start: '', end: '' },
+      { row: 61, course: '凛穏オンライン講義 LEVEL1', chapter: 'LEVEL1 基礎講義', title: '補足ボイス', url: 'assets/demo-voice.wav', note: '', tag: '', hidden: false, start: '', end: '' }
     );
   }
   function mockRight(tag) {
@@ -48,7 +48,7 @@
     { row: 2, name: '凛穏塾2.5期生', tag: '凛穏塾2.5期生', order: 10, published: true, desc: '2.5期生の講義アーカイブです。' },
     { row: 3, name: '凛穏塾2期生',   tag: '凛穏塾2期生',   order: 20, published: true, desc: '' },
     { row: 4, name: '卒業生サロン',   tag: '卒業生サロン',   order: 30, published: true, desc: '卒業生サロン限定の講義です。' },
-    { row: 5, name: '人生を変える基礎講義', tag: '基礎講義', order: 5, published: true, desc: '通称「伝説の500人講義」です。' }
+    { row: 5, name: '凛穏オンライン講義 LEVEL1', tag: '基礎講義', order: 5, published: true, desc: '通称「伝説の500人講義」です。' }
   ];
   var STUDENTS = [
     { row: 2, name: 'デモ 受講生', email: 'demo@example.com',  pass: 'demo', tags: '凛穏塾2.5期生,卒業生サロン', status: '有効', memo: 'デモ用', joined: '2026-08-17', uid: '' },

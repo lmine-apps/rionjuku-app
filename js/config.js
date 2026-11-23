@@ -34,6 +34,24 @@ window.RJ_CONFIG = {
   // 空にすると、演出もメニューの「オープニングを見る」も出なくなります。
   OPENING_VIMEO: '1206946551',
 
+  // 講義の追加購入（凛穏オンライン講義をお求めの方に、まだお持ちでない講義をご案内する）
+  //   PD_BASE  … プロラインの決済ページ。うしろに商品ごとの番号と ?uid= を付けて開く
+  //   LINE_URL … uidが分からない方をLINEへご案内する、プロラインのステップ着火URL。
+  //              届くメッセージのボタンには、次のURLを登録する：
+  //                https://apps.l-mine.com/rionjuku-app/?uid=[[uid]]&open=buy
+  //              空のあいだは「公式LINEからお手続きください」の一文だけになる
+  //   VIA_LINE … true にすると、uidが分かっている方も全員LINEを経由する
+  //   PRODUCTS … course は「コース設定」のコース名と同じにする（お持ちかどうかの見分けに使う）
+  BUY: {
+    PD_BASE: 'https://mka0tn6z.autosns.app/pd/',
+    LINE_URL: '',
+    VIA_LINE: false,
+    PRODUCTS: [
+      { code: 'L1', course: '凛穏オンライン講義 LEVEL1', name: 'LEVEL1　伝説の500人講義', desc: '伝説の500人講義', price: 8800, term: '1年', pd: 'ZJxf9jukgv' },
+      { code: 'L2', course: '凛穏オンライン講義 LEVEL2', name: 'LEVEL2　2Days講座', desc: '2Days講座＋質問回答会＋補足ボイス', price: 18500, term: '1年', pd: 'lp9tWilDBo' }
+    ]
+  },
+
   // ── Webプッシュ通知（Firebase Cloud Messaging）──────────
   // 下の FIREBASE と VAPID_KEY を埋めてから PUSH_READY を true にする。
   PUSH_READY: true,

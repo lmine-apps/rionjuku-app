@@ -391,6 +391,7 @@
     if (act === 'pass') editPassword();
     if (act === 'guide') showGuide();
     if (act === 'opening') showOpening(false);
+    if (act === 'buy') showBuy(false);
     if (act === 'push') showPush();
     if (act === 'skin') showSkin();
     if (act === 'copy') copyUrl();
@@ -795,6 +796,85 @@
   }
 
   /**
+   * 講義の追加購入（2026-11-23・常時販売）
+   *
+   * 凛穏オンライン講義をお求めの方に、まだお持ちでない講義（または期間が終わった講義）をご案内する。
+   * ・出すのは、視聴権（ご購入）でコースをお持ちの方だけ。受講生・サロン生・運営には出さない
+   * ・商品は設定（RJ.CFG.BUY.PRODUCTS）に持つ。その方がお持ちのコースと見比べて、要るものだけ並べる
+   * ・決済ページは「?uid=（プロラインのユーザーID）」で、どなたのご購入かを見分ける。
+   *   uidが分かっている方はそのまま決済へ、分からない方はLINEを経由する（LINEから ?open=buy 付きで戻ってくる）
+   * ・BUY.VIA_LINE を true にすると、全員がLINEを経由する
+   */
+  var buyAsked = false, dataFresh = false;   // 控え（古いかもしれない内容）では購入画面を出さない
+  function buyOffers() {
+    var cfg = RJ.CFG.BUY;
+    if (!cfg || !cfg.PRODUCTS || !state.user || state.user.admin) return [];
+    var cs = state.courses || [];
+    if (!cs.some(function (c) { return !!c.right; })) return [];      // ご購入の方だけ
+    return cfg.PRODUCTS.map(function (p) {
+      var c = cs.filter(function (x) { return x.name === p.course; })[0];
+      if (!c) return { p: p, renew: false };                          // まだお持ちでない
+      if (c.right && !c.right.active) return { p: p, renew: true };   // 期間が終わった
+      return null;                                                    // 視聴できる（ご購入中、または受講生としてお持ち）
+    }).filter(Boolean);
+  }
+  function yen(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '円'; }
+  function buyCardsHtml() {
+    var offers = buyOffers();
+    if (!offers.length) return '';
+    return offers.map(function (o) {
+      return '<button class="pick pick-buy" data-buy="' + esc(o.p.code) + '" type="button">'
+        + '<span class="pick-buy__tag">' + (o.renew ? 'ご視聴期間が終了しました' : 'まだお持ちでない講義') + '</span>'
+        + '<span class="pick-name">' + esc(o.p.course) + '</span>'
+        + (o.p.desc ? '<span class="pick-desc">' + esc(o.p.desc) + '</span>' : '')
+        + '<span class="pick-buy__go">' + (o.renew ? 'もう一度購入する' : '追加で購入する') + '　&rsaquo;</span>'
+        + '</button>';
+    }).join('');
+  }
+  /** LINEから「?open=buy」付きで開かれたとき、入ってすぐ購入画面を出す（一度だけ） */
+  function buyPending() { return !buyAsked && !SHOOTING && /[?&]open=buy(&|$)/.test(location.search); }
+  function scheduleBuy() {
+    if (!dataFresh || !buyPending()) return false;
+    buyAsked = true;
+    showBuy(true);
+    return true;
+  }
+  function showBuy(fromLine) {
+    var cfg = RJ.CFG.BUY || {};
+    var offers = buyOffers();
+    if (!offers.length) {
+      RJ.modal('講義のご購入', '<p style="margin-top:0">ただいま、追加でお求めいただける講義はありません。</p>',
+        null, { cancelText: '閉じる' });
+      return;
+    }
+    var payUid = String((state.user && state.user.uid) || uid || '').trim();
+    // LINEから戻ってきたときは、かならずそのまま決済へ（もう一度LINEへ回さない）
+    var direct = !!payUid && (fromLine || !cfg.VIA_LINE);
+    var html = '<p style="margin-top:0;font-size:14px">お持ちでない講義を、追加でお求めいただけます。</p>'
+      + offers.map(function (o) {
+        var p = o.p;
+        return '<div class="buy-item">'
+          + '<div class="buy-item__name">' + esc(p.name) + '</div>'
+          + (p.desc ? '<div class="buy-item__desc">' + esc(p.desc) + '</div>' : '')
+          + '<div class="buy-item__meta"><b>' + yen(p.price) + '</b><small>（税込・一回払い）</small>'
+          + '<span>ご視聴期間 ' + esc(p.term || '') + '</span></div>'
+          + (direct
+            ? '<a class="btn buy-item__go" target="_blank" rel="noopener" href="' + esc(cfg.PD_BASE + p.pd + '?uid=' + encodeURIComponent(payUid)) + '">'
+              + (o.renew ? 'もう一度購入する' : '購入手続きへ') + '</a>'
+            : '')
+          + '</div>';
+      }).join('')
+      + (direct ? ''
+        : (cfg.LINE_URL
+          ? '<a class="btn buy-line" target="_blank" rel="noopener" href="' + esc(cfg.LINE_URL) + '">LINEで購入手続きへ</a>'
+            + '<p class="hint">凛穏塾のLINEが開き、ご購入ページのご案内が届きます。</p>'
+          : '<p class="hint">ご購入は、凛穏塾の公式LINEからお手続きいただけます。</p>'))
+      + '<p class="buy-note">ご視聴いただけるのは、ご購入者ご本人のみです。内容の転用・転売・共有はご遠慮ください。</p>'
+      + '<p class="hint">ご購入が済みましたら、右上のメニュー「最新の状態に更新」を押すと、コースが追加されます。</p>';
+    RJ.modal('講義のご購入', html, null, { cancelText: '閉じる' });
+  }
+
+  /**
    * オープニング（2026-11-23・常時販売）
    *
    * 凛穏オンライン講義をお求めの方に、いちばん最初に一度だけご覧いただく動画（受講方法と注意事項）。
@@ -885,7 +965,9 @@
       app.inert = wasInert;
       setTimeout(function () { if (host.parentNode) host.parentNode.removeChild(host); }, 600);
       // 起動時の続き（使い方ガイド → ご登録のご案内）
-      if (first && silent !== true && !$('scApp').classList.contains('hidden')) { scheduleGuide(); scheduleAccountSetup(); }
+      if (first && silent !== true && !$('scApp').classList.contains('hidden')) {
+        if (!scheduleBuy()) { scheduleGuide(); scheduleAccountSetup(); }
+      }
     }
     openingClose = close;
     var nx = host.querySelector('#opNext'), sk = host.querySelector('#opSkip');
@@ -1111,11 +1193,12 @@
           return;
         }
         applyData(res);
+        dataFresh = true;
         saveDataCache(res);
         migrateOldWatched();
         if (shown) reRender(); else renderApp();
         // 控えを先に出したときは、最新の内容が届いてから判断する（ご購入の直後は、控えにまだコースが無い）
-        if (shown && !guideClose && !document.querySelector('.modal')) scheduleOpening();
+        if (shown && !guideClose && !document.querySelector('.modal')) { if (!scheduleOpening()) scheduleBuy(); }
         scheduleAccountSetup();
       })
       .catch(function (e) { if (!shown) showLogin(e.message); });
@@ -1136,6 +1219,7 @@
     }
     renderNewsBadge();
     $('mOpening').classList.toggle('hidden', !isBuyer());
+    $('mBuy').classList.toggle('hidden', !buyOffers().length);
   }
 
   function showLogin(message) {
@@ -1170,14 +1254,17 @@
       $('side').classList.add('empty-side');
       $('sideHead').innerHTML = '';
       $('sideBody').innerHTML = '';
-    } else if (state.courses.length === 1) {
-      openCourse(0);                 // コースが1つなら、そのまま視聴画面へ
+    } else if (state.courses.length === 1 && !buyOffers().length) {
+      openCourse(0);                 // コースが1つなら、そのまま視聴画面へ（追加でお求めいただける講義がある方は一覧へ）
     } else {
       showPicker();                  // 複数ならコース選択
     }
     $('mOpening').classList.toggle('hidden', !isBuyer());
+    $('mBuy').classList.toggle('hidden', !buyOffers().length);
     // 凛穏オンライン講義をお求めの方には、いちばん最初にオープニングをご覧いただく（閉じたあとに下の2つへ進む）
     if (scheduleOpening()) return;
+    if (scheduleBuy()) return;      // LINEから「購入画面」を直接ひらいたとき
+    if (buyPending()) return;       // 控えで先に描いたときは、最新の内容が届くまで待つ（ガイドやお知らせを先に出さない）
     // 起動ごとに一度だけ。スキップは次回も表示、非表示は本人が選んだときだけ。
     scheduleGuide();
     scheduleAccountSetup();
@@ -1212,9 +1299,12 @@
         + rightLine(c)
         + bar(pr)
         + '</button>';
-    }).join('');
-    Array.prototype.forEach.call($('pickerList').querySelectorAll('.pick'), function (b) {
+    }).join('') + buyCardsHtml();
+    Array.prototype.forEach.call($('pickerList').querySelectorAll('.pick[data-i]'), function (b) {
       b.addEventListener('click', function () { openCourse(Number(b.dataset.i)); });
+    });
+    Array.prototype.forEach.call($('pickerList').querySelectorAll('[data-buy]'), function (b) {
+      b.addEventListener('click', function () { showBuy(false); });
     });
     renderSideCourses();
     renderResumePicker();
