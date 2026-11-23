@@ -216,6 +216,7 @@
           });
           return;
         }
+        if (action === 'opening_seen') { resolve({ ok: true }); return; }
         if (action === 'account_setup') {
           var srow = STUDENTS.filter(function (x) { return x.email === me.email; })[0];
           if (String(p.email || '').toLowerCase() === 'hanako@example.com') { resolve({ ok: false, error: 'email_exists' }); return; }

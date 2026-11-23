@@ -29,6 +29,11 @@ window.RJ_CONFIG = {
   // 空のあいだはボタンを出さず、「LINEからお手続きいただけます」の一文だけになります。
   EXTEND_URL: '',
 
+  // オープニング動画（受講方法と注意事項）のVimeoの番号。
+  // 凛穏オンライン講義をお求めの方が、初めて入ったときに一度だけ全画面でお出しします。
+  // 空にすると、演出もメニューの「オープニングを見る」も出なくなります。
+  OPENING_VIMEO: '1206946551',
+
   // ── Webプッシュ通知（Firebase Cloud Messaging）──────────
   // 下の FIREBASE と VAPID_KEY を埋めてから PUSH_READY を true にする。
   PUSH_READY: true,

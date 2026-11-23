@@ -390,6 +390,7 @@
     if (act === 'name') editName();
     if (act === 'pass') editPassword();
     if (act === 'guide') showGuide();
+    if (act === 'opening') showOpening(false);
     if (act === 'push') showPush();
     if (act === 'skin') showSkin();
     if (act === 'copy') copyUrl();
@@ -794,6 +795,107 @@
   }
 
   /**
+   * オープニング（2026-11-23・常時販売）
+   *
+   * 凛穏オンライン講義をお求めの方に、いちばん最初に一度だけご覧いただく動画（受講方法と注意事項）。
+   * ・出すのは、視聴権（ご購入）でコースをお持ちの方だけ。受講生・サロン生・運営には出さない
+   * ・「一度だけ」は、この端末の控えと、サーバーの印（user.opSeen）の両方で見る
+   * ・閉じたあとに、使い方ガイド → メールアドレスとパスワードのご登録 の順で続く
+   * ・あとから見返すときは、右上のメニュー「オープニングを見る」
+   */
+  var openingOpen = false, openingClose = null;
+  function isBuyer() {
+    if (!RJ.CFG.OPENING_VIMEO || !state.user || state.user.admin) return false;
+    return (state.courses || []).some(function (c) { return c.right && c.right.active; });
+  }
+  function openingKey() {
+    var u = state.user || {};
+    return 'rj_opening_seen:v1:' + (RJ.MOCK ? 'demo:' : 'live:') + String(u.uid || u.email || '').trim().toLowerCase();
+  }
+  function openingSeen() {
+    if (state.user && state.user.opSeen === true) return true;
+    try { return localStorage.getItem(openingKey()) === '1'; } catch (e) { return false; }
+  }
+  function markOpeningSeen() {
+    try { localStorage.setItem(openingKey(), '1'); } catch (e) {}
+    if (state.user) state.user.opSeen = true;
+    // サーバーにも残す（別の端末・ブラウザで開いたときに、もう一度出さないため）。失敗しても何もしない
+    try { api('opening_seen', { token: store.token() }, { quiet: true }).catch(function () {}); } catch (e) {}
+  }
+  function scheduleOpening() {
+    if (SHOOTING || openingOpen || !isBuyer() || openingSeen()) return false;
+    showOpening(true);
+    return true;
+  }
+  function showOpening(first) {
+    if (openingOpen || !RJ.CFG.OPENING_VIMEO) return;
+    openingOpen = true;
+    if (guideTimer) { clearTimeout(guideTimer); guideTimer = null; if (first) guideStartupShown = false; }   // 使い方ガイドは、閉じたあとに出し直す
+    var previousOverflow = document.body.style.overflow;
+    var app = $('scApp'), wasInert = app.inert;
+    var host = document.createElement('div');
+    host.className = 'op-host';
+    host.setAttribute('role', 'dialog'); host.setAttribute('aria-modal', 'true'); host.setAttribute('aria-labelledby', 'opTitle');
+    host.innerHTML = '<div class="op-shell">'
+      + '<div class="op-kicker">WELCOME TO RINONJUKU</div>'
+      + '<h2 class="op-title" id="opTitle" tabindex="-1"><span>運を自分で創る</span>凛穏塾へようこそ</h2>'
+      + '<p class="op-lead">' + (first
+          ? '受講を始める前に、まずはこちらのオープニング動画をご覧ください。<br>受講方法と大切な注意事項をお伝えしています。'
+          : '受講方法と大切な注意事項をお伝えしています。') + '</p>'
+      + '<div class="op-video"><div class="op-video__in"><iframe id="opFrame" title="凛穏塾 オープニング" '
+      + 'allow="autoplay; fullscreen; picture-in-picture" allowfullscreen '
+      + 'src="https://player.vimeo.com/video/' + encodeURIComponent(RJ.CFG.OPENING_VIMEO)
+      + '?title=0&amp;byline=0&amp;portrait=0&amp;badge=0&amp;playsinline=1"></iframe></div></div>'
+      + '<div class="op-actions">'
+      + (first
+          ? '<button class="op-btn op-next" id="opNext" type="button" hidden>講義へ進む<small>ご視聴ありがとうございました</small></button>'
+            + '<button class="op-btn op-skip" id="opSkip" type="button">スキップして講義へ</button>'
+          : '<button class="op-btn op-skip" id="opSkip" type="button">閉じる</button>')
+      + '</div>'
+      + '<p class="op-hint">' + (first
+          ? 'この動画は、右上のお名前のメニュー「オープニングを見る」から、いつでもご覧いただけます。'
+          : '') + '</p>'
+      + '</div>';
+    document.body.appendChild(host);
+    document.body.style.overflow = 'hidden';
+    app.inert = true;
+    requestAnimationFrame(function () { host.classList.add('is-show'); });
+
+    var player = null;
+    try {
+      if (window.Vimeo && window.Vimeo.Player) {
+        player = new Vimeo.Player(host.querySelector('#opFrame'));
+        player.on('ended', function () {
+          if (!first) return;
+          markOpeningSeen();
+          var n = host.querySelector('#opNext'), k = host.querySelector('#opSkip');
+          if (n) { n.hidden = false; n.focus({ preventScroll: true }); }
+          if (k) k.hidden = true;
+        });
+      }
+    } catch (e) { player = null; }
+
+    function close(silent) {
+      if (!openingOpen) return;
+      openingOpen = false; openingClose = null;
+      if (first && silent !== true) markOpeningSeen();
+      if (player) { try { player.pause().catch(function () {}); } catch (e) {} }
+      host.classList.remove('is-show'); host.classList.add('is-hide');
+      document.body.style.overflow = previousOverflow;
+      app.inert = wasInert;
+      setTimeout(function () { if (host.parentNode) host.parentNode.removeChild(host); }, 600);
+      // 起動時の続き（使い方ガイド → ご登録のご案内）
+      if (first && silent !== true && !$('scApp').classList.contains('hidden')) { scheduleGuide(); scheduleAccountSetup(); }
+    }
+    openingClose = close;
+    var nx = host.querySelector('#opNext'), sk = host.querySelector('#opSkip');
+    if (nx) nx.onclick = function () { close(); };
+    if (sk) sk.onclick = function () { close(); };
+    host.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !first) { ev.preventDefault(); close(); } });
+    host.querySelector('#opTitle').focus({ preventScroll: true });
+  }
+
+  /**
    * メールアドレスとパスワードのご登録（2026-11-20・常時販売）
    *
    * LINEからお入りになった方は、パスワードを決めなくてもすぐご覧いただけます。
@@ -806,6 +908,7 @@
     return u.noMail === true || u.hasPass === false;   // 古い控えには印が無いので、はっきり分かるときだけ
   }
   function scheduleAccountSetup() {
+    if (openingOpen) return;            // オープニングのあいだは出さない（閉じたときに呼び直す）
     if (SHOOTING || setupAsked || !needSetup()) return;
     setupAsked = true;
     (function wait(n) {
@@ -1011,7 +1114,9 @@
         saveDataCache(res);
         migrateOldWatched();
         if (shown) reRender(); else renderApp();
-        scheduleAccountSetup();   // 控えを先に出したときは、最新の内容が届いてから判断する
+        // 控えを先に出したときは、最新の内容が届いてから判断する（ご購入の直後は、控えにまだコースが無い）
+        if (shown && !guideClose && !document.querySelector('.modal')) scheduleOpening();
+        scheduleAccountSetup();
       })
       .catch(function (e) { if (!shown) showLogin(e.message); });
   }
@@ -1030,12 +1135,14 @@
       renderApp();
     }
     renderNewsBadge();
+    $('mOpening').classList.toggle('hidden', !isBuyer());
   }
 
   function showLogin(message) {
     endResumeSession(); resumeView++;
     clearTimeout(guideTimer);
     if (guideClose) guideClose(false);
+    if (openingClose) openingClose(true);
     $('scApp').classList.add('hidden');
     $('scLogin').classList.remove('hidden');
     if (message) { $('loginMsg').className = 'msg err'; $('loginMsg').textContent = message; }
@@ -1068,6 +1175,9 @@
     } else {
       showPicker();                  // 複数ならコース選択
     }
+    $('mOpening').classList.toggle('hidden', !isBuyer());
+    // 凛穏オンライン講義をお求めの方には、いちばん最初にオープニングをご覧いただく（閉じたあとに下の2つへ進む）
+    if (scheduleOpening()) return;
     // 起動ごとに一度だけ。スキップは次回も表示、非表示は本人が選んだときだけ。
     scheduleGuide();
     scheduleAccountSetup();

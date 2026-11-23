@@ -1794,3 +1794,67 @@ html[data-season="natsu"] .fall i { filter: blur(.4px); }
 @media (max-width: 560px) {
   .student-page .watch .watchers { margin-left: 16px; margin-right: 16px; }
 }
+
+/* ===== オープニング（凛穏オンライン講義をお求めの方へ、最初に一度だけ）2026-11-23 =====
+   旧アーカイブ販売ページの初回演出を引き継いだもの。配色の切り替えには連動させず、常に濃紺。 */
+.op-host { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center;
+  padding: max(18px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  overflow-y: auto; -webkit-overflow-scrolling: touch; color: #fff; opacity: 0;
+  background:
+    radial-gradient(circle at 50% 4%, rgba(175,224,247,.26), transparent 30%),
+    radial-gradient(circle at 12% 16%, rgba(98,183,231,.16), transparent 28%),
+    linear-gradient(180deg, rgba(3,12,26,.98) 0%, rgba(7,23,44,.98) 52%, rgba(9,37,64,.98) 100%); }
+.op-host.is-show { animation: opIn .78s ease forwards; }
+.op-host.is-hide { animation: opOut .58s ease forwards; pointer-events: none; }
+.op-host::before, .op-host::after { content: ""; position: absolute; left: -18%; right: -18%; bottom: -9%; height: 34%;
+  pointer-events: none; opacity: .55;
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(175,224,247,.30), transparent 34%),
+    radial-gradient(ellipse at 48% 8%, rgba(98,183,231,.20), transparent 31%),
+    radial-gradient(ellipse at 82% 2%, rgba(175,224,247,.24), transparent 34%),
+    linear-gradient(180deg, rgba(98,183,231,0), rgba(98,183,231,.16));
+  border-radius: 48% 52% 0 0 / 34% 40% 0 0; animation: opWave 7.6s ease-in-out infinite alternate; }
+.op-host::after { bottom: -13%; opacity: .32; filter: blur(2px); animation-duration: 10.4s; animation-direction: alternate-reverse; }
+.op-shell { position: relative; z-index: 1; width: min(100%, 720px); padding: 16px; margin: auto;
+  border: 1px solid rgba(175,224,247,.24); border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.055)), rgba(7,23,44,.62);
+  box-shadow: 0 24px 72px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.13);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.op-shell::before { content: ""; position: absolute; inset: 8px; border: 1px solid rgba(175,224,247,.12); border-radius: 18px; pointer-events: none; }
+.op-kicker { margin: 2px 0 7px; color: #afe0f7; font-size: 10px; font-weight: 800; line-height: 1.5; text-align: center; letter-spacing: .24em; }
+.op-title { margin: 0; color: #fff; font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  font-size: clamp(23px, 6.7vw, 34px); font-weight: 500; line-height: 1.42; text-align: center; letter-spacing: .08em;
+  text-shadow: 0 6px 26px rgba(0,0,0,.30); outline: none; }
+.op-title span { display: block; color: #afe0f7; font-size: .58em; letter-spacing: .14em; }
+.op-lead { max-width: 520px; margin: 9px auto 14px; color: rgba(255,255,255,.78); font-size: 13px; font-weight: 700;
+  line-height: 1.8; text-align: center; letter-spacing: .04em; }
+.op-video { position: relative; overflow: hidden; padding: 5px; border: 1px solid rgba(175,224,247,.24); border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(175,224,247,.06)); box-shadow: 0 18px 40px rgba(0,0,0,.22); }
+.op-video__in { position: relative; width: 100%; padding-top: 56.25%; overflow: hidden; border-radius: 13px; background: #02070e; }
+.op-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.op-actions { position: relative; display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 13px; }
+.op-btn { display: block; width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid rgba(175,224,247,.34); border-radius: 13px;
+  color: #fff; font: inherit; font-size: 14px; font-weight: 800; line-height: 1.55; text-align: center; letter-spacing: .07em; cursor: pointer;
+  background: radial-gradient(circle at 82% 0%, rgba(132,206,241,.23), transparent 38%), linear-gradient(145deg, #07172c, #1c4b78);
+  box-shadow: 0 10px 26px rgba(0,0,0,.24); }
+.op-btn[hidden] { display: none; }
+.op-btn:active { transform: scale(.98); }
+.op-btn:focus-visible { outline: 2px solid #afe0f7; outline-offset: 2px; }
+.op-btn small { display: block; margin-top: 2px; color: rgba(255,255,255,.66); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+.op-next { animation: opBtnIn .55s ease forwards; border-color: rgba(175,224,247,.6); }
+.op-skip { border: 1px solid rgba(255,255,255,.18); color: rgba(255,255,255,.72); background: rgba(255,255,255,.055); box-shadow: none; font-size: 13px; }
+.op-hint { position: relative; margin: 10px 0 0; color: rgba(255,255,255,.5); font-size: 11px; font-weight: 700; line-height: 1.65; text-align: center; letter-spacing: .04em; }
+.op-hint:empty { display: none; }
+@keyframes opIn { from { opacity: 0; filter: blur(8px); } to { opacity: 1; filter: blur(0); } }
+@keyframes opOut { from { opacity: 1; filter: blur(0); } to { opacity: 0; filter: blur(10px); } }
+@keyframes opWave { from { transform: translate3d(-2.4%, 0, 0) scaleX(1.02); } to { transform: translate3d(2.4%, -8px, 0) scaleX(1.06); } }
+@keyframes opBtnIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 420px) {
+  .op-host { align-items: flex-start; }
+  .op-shell { padding: 13px; border-radius: 20px; }
+  .op-lead { font-size: 12.5px; line-height: 1.7; margin: 7px auto 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .op-host.is-show, .op-host.is-hide, .op-host::before, .op-host::after, .op-next { animation: none; }
+  .op-host.is-show { opacity: 1; }
+}
