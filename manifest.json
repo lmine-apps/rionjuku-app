@@ -1,7 +1,7 @@
 {
   "name": "凛穏塾 動画ページ",
   "short_name": "凛穏塾",
-  "description": "凛穏塾 受講生専用の動画視聴ページ",
+  "description": "凛穏塾 会員専用の動画視聴ページ",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

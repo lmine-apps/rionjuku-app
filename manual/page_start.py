@@ -251,7 +251,7 @@ def build():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
-<title>はじめての方へ｜凛穏塾 受講生専用 動画ページ</title>
+<title>はじめての方へ｜凛穏塾 会員専用 動画ページ</title>
 <style>%s%s</style>
 </head>
 <body>

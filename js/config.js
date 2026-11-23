@@ -6,7 +6,7 @@ window.RJ_CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbzF6jMW-UHALjgGrpMpga4VREFBoDF8AYkRv3wp6U-5pq_mNi2GzzrroRGd5jkh7Rh6IQ/exec',
 
   SITE_NAME: '凛穏塾',
-  SITE_SUB: '受講生専用 動画ページ',
+  SITE_SUB: '会員専用 動画ページ',
 
   // 公開URL（メニューの「パソコンで見る」でコピーされるアドレス。空ならその時開いているURL）
   PUBLIC_URL: 'https://apps.l-mine.com/rionjuku-app/',

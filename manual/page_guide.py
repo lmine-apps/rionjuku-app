@@ -15,7 +15,7 @@ SCR_LOGIN = """
 <div class="a-body" style="padding:26px 16px 20px">
   <div style="text-align:center;margin-bottom:14px">
     <div style="font-family:var(--serif);font-size:20px;letter-spacing:.2em">凛穏塾</div>
-    <div style="font-size:9px;color:#8fd0f5;letter-spacing:.25em;margin-top:3px">受講生専用 動画ページ</div>
+    <div style="font-size:9px;color:#8fd0f5;letter-spacing:.25em;margin-top:3px">会員専用 動画ページ</div>
   </div>
   <div class="a-field"><span class="a-label">メールアドレス</span>
     <div class="a-input">&nbsp;</div></div>
@@ -339,7 +339,7 @@ SECS = [
 def build():
     return page(
         fname="guide.html",
-        title="使い方ガイド｜凛穏塾 受講生専用 動画ページ",
+        title="使い方ガイド｜凛穏塾 会員専用 動画ページ",
         kicker="RIONJUKU ONLINE STUDY",
         cover_title="受講生さま向け<br>使い方ガイド",
         cover_sub="はじめてのログインから、動画の観かた・通知の受け取りかたまで。"
