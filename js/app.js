@@ -808,10 +808,12 @@
   var buyAsked = false, dataFresh = false;   // 控え（古いかもしれない内容）では購入画面を出さない
   function buyOffers() {
     var cfg = RJ.CFG.BUY;
-    if (!cfg || !cfg.PRODUCTS || !state.user || state.user.admin) return [];
+    if (!cfg || !cfg.PRODUCTS || !state.user || (state.user.admin && !testing())) return [];
     var cs = state.courses || [];
     if (!cs.some(function (c) { return !!c.right; })) return [];      // ご購入の方だけ
-    return cfg.PRODUCTS.map(function (p) {
+    return cfg.PRODUCTS.filter(function (p) {
+      return !state.user.admin || inTest(p.tag);                     // 決済テスト中の運営には、対象のコースの商品だけ
+    }).map(function (p) {
       var c = cs.filter(function (x) { return x.name === p.course; })[0];
       if (!c) return { p: p, renew: false };                          // まだお持ちでない
       if (c.right && !c.right.active) return { p: p, renew: true };   // 期間が終わった
@@ -832,6 +834,21 @@
     }).join('');
   }
   /** LINEから「?open=buy」付きで開かれたとき、入ってすぐ購入画面を出す（一度だけ） */
+  /** 決済テスト中の運営にだけ、画面の上に帯を出す（お客様の画面と取り違えないように） */
+  function paintPayTestBar() {
+    var bar = $('payTestBar');
+    if (!testing()) { if (bar) bar.parentNode.removeChild(bar); return; }
+    var names = (state.payTest || []).map(function (t) {
+      var p = (RJ.CFG.BUY && RJ.CFG.BUY.PRODUCTS || []).filter(function (x) { return String(x.tag).toLowerCase() === String(t).toLowerCase(); })[0];
+      return p ? p.course : t;
+    });
+    if (!bar) {
+      bar = document.createElement('div'); bar.id = 'payTestBar'; bar.className = 'paytest-bar';
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+    bar.innerHTML = '🧪 <b>決済テスト中</b>：' + names.map(esc).join('・') + ' は未購入の扱いです'
+      + '<a href="admin.html' + (RJ.MOCK ? '?mock=1' : '') + '">運営ページで切り替え</a>';
+  }
   function buyPending() { return !buyAsked && !SHOOTING && /[?&]open=buy(&|$)/.test(location.search); }
   function scheduleBuy() {
     if (!dataFresh || !buyPending()) return false;
@@ -848,6 +865,7 @@
       return;
     }
     var payUid = String((state.user && state.user.uid) || uid || '').trim();
+    var test = testing();
     // LINEから戻ってきたときは、かならずそのまま決済へ（もう一度LINEへ回さない）
     var direct = !!payUid && (fromLine || !cfg.VIA_LINE);
     var html = '<p style="margin-top:0;font-size:14px">お持ちでない講義を、追加でお求めいただけます。</p>'
@@ -858,20 +876,39 @@
           + (p.desc ? '<div class="buy-item__desc">' + esc(p.desc) + '</div>' : '')
           + '<div class="buy-item__meta"><b>' + yen(p.price) + '</b><small>（税込・一回払い）</small>'
           + '<span>ご視聴期間 ' + esc(p.term || '') + '</span></div>'
-          + (direct
+          + (test
+            ? '<button class="btn buy-item__go" data-testbuy="' + esc(p.code) + '" type="button">テスト購入（決済なし）</button>'
+            : direct
             ? '<a class="btn buy-item__go" target="_blank" rel="noopener" href="' + esc(cfg.PD_BASE + p.pd + '?uid=' + encodeURIComponent(payUid)) + '">'
               + (o.renew ? 'もう一度購入する' : '購入手続きへ') + '</a>'
             : '')
           + '</div>';
       }).join('')
-      + (direct ? ''
+      + (test ? '<p class="buy-test">🧪 決済テスト中です。決済はせず、購入した扱いで次へ進みます（LINEの購入メッセージは届きません）。</p>'
+        : direct ? ''
         : (cfg.LINE_URL
           ? '<a class="btn buy-line" target="_blank" rel="noopener" href="' + esc(cfg.LINE_URL) + '">LINEで購入手続きへ</a>'
             + '<p class="hint">凛穏塾のLINEが開き、ご購入ページのご案内が届きます。</p>'
           : '<p class="hint">ご購入は、凛穏塾の公式LINEからお手続きいただけます。</p>'))
       + '<p class="buy-note">ご視聴いただけるのは、ご購入者ご本人のみです。内容の転用・転売・共有はご遠慮ください。</p>'
       + '<p class="hint">ご購入が済みましたら、右上のメニュー「最新の状態に更新」を押すと、コースが追加されます。</p>';
-    RJ.modal('講義のご購入', html, null, { cancelText: '閉じる' });
+    var m = RJ.modal('講義のご購入', html, null, { cancelText: '閉じる' });
+    Array.prototype.forEach.call(m.host.querySelectorAll('[data-testbuy]'), function (b) {
+      b.addEventListener('click', function () { testBuy(b, m); });
+    });
+  }
+  /**
+   * テスト購入：本番の決済と同じ受け口（GASの purchaseCore_）で視聴権を出し、
+   * 決済後のLINEメッセージのボタンと同じご案内ページ（start-online.html）へ進む。
+   */
+  function testBuy(btn, m) {
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> テスト購入中…';
+    api('pay_test_buy', { token: store.token(), product: btn.dataset.testbuy }).then(function (res) {
+      if (!res || !res.ok) { m.setMsg(RJ.errMsg(res)); btn.disabled = false; btn.textContent = 'テスト購入（決済なし）'; return; }
+      try { localStorage.removeItem(dataCacheKey()); } catch (e) {}
+      var u = String((state.user && state.user.uid) || uid || '').trim();
+      location.href = 'start-online.html' + (u ? '?uid=' + encodeURIComponent(u) : '');
+    }).catch(function (e) { m.setMsg(e.message); btn.disabled = false; btn.textContent = 'テスト購入（決済なし）'; });
   }
 
   /**
@@ -884,8 +921,14 @@
    * ・あとから見返すときは、右上のメニュー「オープニングを見る」
    */
   var openingOpen = false, openingClose = null;
+  /** 決済テスト中の運営か（運営ページの「決済テスト」で対象のコースを選んだ人だけ） */
+  function testing() { return !!(state.user && state.user.admin && (state.payTest || []).length); }
+  function inTest(tag) {
+    var t = String(tag || '').toLowerCase();
+    return (state.payTest || []).some(function (x) { return String(x).toLowerCase() === t; });
+  }
   function isBuyer() {
-    if (!RJ.CFG.OPENING_VIMEO || !state.user || state.user.admin) return false;
+    if (!RJ.CFG.OPENING_VIMEO || !state.user || (state.user.admin && !testing())) return false;
     return (state.courses || []).some(function (c) { return c.right && c.right.active; });
   }
   function openingKey() {
@@ -1087,7 +1130,7 @@
   function saveDataCache(res) {
     try {
       localStorage.setItem(dataCacheKey(), JSON.stringify({
-        at: Date.now(), user: res.user, courses: res.courses, news: res.news, myReplies: res.myReplies
+        at: Date.now(), user: res.user, courses: res.courses, news: res.news, myReplies: res.myReplies, payTest: res.payTest
       }));
     } catch (e) {}                      // 容量オーバーなどは黙って諦める（次回は普通に読む）
   }
@@ -1158,6 +1201,7 @@
     state.courses = res.courses || [];
     state.news = res.news || [];
     state.watchCounts = res.watchCounts || {};
+    state.payTest = res.payTest || [];   // 決済テスト中の運営だけ、対象のコースのタグが入る
     state.myReplies = res.myReplies || {};
     if (res.watched) {
       state.watched = {};
@@ -1220,6 +1264,7 @@
     renderNewsBadge();
     $('mOpening').classList.toggle('hidden', !isBuyer());
     $('mBuy').classList.toggle('hidden', !buyOffers().length);
+    paintPayTestBar();
   }
 
   function showLogin(message) {
@@ -1261,6 +1306,7 @@
     }
     $('mOpening').classList.toggle('hidden', !isBuyer());
     $('mBuy').classList.toggle('hidden', !buyOffers().length);
+    paintPayTestBar();
     // 凛穏オンライン講義をお求めの方には、いちばん最初にオープニングをご覧いただく（閉じたあとに下の2つへ進む）
     if (scheduleOpening()) return;
     if (scheduleBuy()) return;      // LINEから「購入画面」を直接ひらいたとき
@@ -1378,8 +1424,53 @@
     }
   }
 
+  /**
+   * 凛穏オンライン講義（LEVEL1・LEVEL2…）の切り替えボタン（並びは config の BUY.PRODUCTS の順）。
+   * ・両方お持ちの方：「コースを変更」に戻らずに、講義どうしを行き来できる
+   * ・片方だけの方：お持ちでない講義の場所に「＋ 追加購入」を出す（押すと購入画面）
+   */
+  function seriesSwitchHtml(c) {
+    var prods = (RJ.CFG.BUY && RJ.CFG.BUY.PRODUCTS) || [];
+    var offers = buyOffers();
+    var items = prods.map(function (p) {
+      var i = state.courses.findIndex(function (x) { return x.name === p.course; });
+      if (i >= 0) return { i: i, p: p };
+      var canBuy = offers.some(function (o) { return o.p.code === p.code && !o.renew; });
+      return canBuy ? { i: -1, p: p } : null;
+    }).filter(Boolean);
+    if (items.length < 2 || !items.some(function (m) { return m.i === state.ci; })) return '';
+    return '<div class="series-switch" role="group" aria-label="講義の切り替え">'
+      + items.map(function (m) {
+        var parts = String(m.p.name || m.p.course).split(/[\s　]+/);
+        if (m.i < 0) {
+          return '<button class="ss-btn ss-buy" data-ssbuy="' + esc(m.p.code) + '" type="button">'
+            + '<b>' + esc(parts[0]) + '</b><span>＋ 追加購入</span></button>';
+        }
+        var on = m.i === state.ci;
+        return '<button class="ss-btn' + (on ? ' on' : '') + '" data-ss="' + m.i + '" type="button"'
+          + (on ? ' aria-current="true"' : '') + '>'
+          + '<b>' + esc(parts[0]) + '</b>' + (parts.length > 1 ? '<span>' + esc(parts.slice(1).join(' ')) + '</span>' : '')
+          + '</button>';
+      }).join('') + '</div>';
+  }
+  function bindSeriesSwitch(root) {
+    Array.prototype.forEach.call(root.querySelectorAll('[data-ss]'), function (b) {
+      b.addEventListener('click', function () {
+        var i = Number(b.dataset.ss);
+        closeDrawer();
+        if (i !== state.ci) openCourse(i);
+      });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-ssbuy]'), function (b) {
+      b.addEventListener('click', function () { closeDrawer(); showBuy(false); });
+    });
+  }
+
   function renderSideChapters() {
     var c = state.courses[state.ci];
+    var sw = seriesSwitchHtml(c);
+    var vs = $('vSwitch');
+    if (vs) { vs.innerHTML = sw; vs.classList.toggle('hidden', !sw); bindSeriesSwitch(vs); }
     $('sideHead').innerHTML =
       (state.courses.length > 1
         ? '<button class="side-back" id="toPicker" type="button">← コースを変更</button>' : '')

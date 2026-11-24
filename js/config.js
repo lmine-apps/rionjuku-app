@@ -42,14 +42,15 @@ window.RJ_CONFIG = {
   //                https://apps.l-mine.com/rionjuku-app/?uid=[[uid]]&open=buy
   //              空のあいだは「公式LINEからお手続きください」の一文だけになる
   //   VIA_LINE … true にすると、uidが分かっている方も全員LINEを経由する
-  //   PRODUCTS … course は「コース設定」のコース名と同じにする（お持ちかどうかの見分けに使う）
+  //   PRODUCTS … course は「コース設定」のコース名、tag は「コース設定」のタグと同じにする
+  //              （お持ちかどうか・決済テストの対象かどうかの見分けに使う）
   BUY: {
     PD_BASE: 'https://mka0tn6z.autosns.app/pd/',
     LINE_URL: 'https://mka0tn6z.autosns.app/addfriend/s/AbIdhLEjBQ/@129snyzr',
-    VIA_LINE: false,
+    VIA_LINE: true,     // 2026-11-24 指示によりLINE経由に（LINEから戻ってきたとき＝open=buy だけ、決済ページへ直接）
     PRODUCTS: [
-      { code: 'L1', course: '凛穏オンライン講義 LEVEL1', name: 'LEVEL1　伝説の500人講義', desc: '伝説の500人講義', price: 8800, term: '1年', pd: 'ZJxf9jukgv' },
-      { code: 'L2', course: '凛穏オンライン講義 LEVEL2', name: 'LEVEL2　2Days講座', desc: '2Days講座＋質問回答会＋補足ボイス', price: 18500, term: '1年', pd: 'lp9tWilDBo' }
+      { code: 'L1', tag: 'L1', course: '凛穏オンライン講義 LEVEL1', name: 'LEVEL1　伝説の500人講義', desc: '伝説の500人講義', price: 8800, term: '1年', pd: 'ZJxf9jukgv' },
+      { code: 'L2', tag: 'L2', course: '凛穏オンライン講義 LEVEL2', name: 'LEVEL2　2Days講座', desc: '2Days講座＋質問回答会＋補足ボイス', price: 18500, term: '1年', pd: 'lp9tWilDBo' }
     ]
   },
 

@@ -92,6 +92,7 @@
         renderStudentFilters();
         renderStudents();
         renderCourses();
+        renderPayTest();
         openFromQuery();
       })
       .catch(function (e) { showLogin(e.message); });
@@ -132,7 +133,7 @@
   }
 
   // ---------- タブ ----------
-  var TABS = ['video', 'news', 'student', 'course'];
+  var TABS = ['video', 'news', 'student', 'course', 'paytest'];
   Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (b) {
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (x) { x.classList.remove('on'); });
@@ -142,6 +143,127 @@
       });
     });
   });
+
+  // ---------- 決済テスト（2026-11-23）----------
+  /*
+   * 有料コース（商品マスターのタグを持つコース）を、運営のアカウントで「未購入から」通しで試す。
+   * ・対象にしたコースは、オンにした本人のアカウントだけ未購入の扱いになる（ほかの運営・お客様には影響しない）
+   * ・テスト購入は、本番の決済と同じGASの受け口を通る。発行元が「テスト」になるだけ
+   * ・決済後は、LINEメッセージのボタンと同じご案内ページ（start-online.html）へ進む
+   */
+  var PT = null;
+  function renderPayTest() {
+    var box = $('payTestBox');
+    if (!box) return;
+    box.innerHTML = '<div class="pt-card"><p>読み込み中…</p></div>';
+    api('pay_test_get', { token: store.token() }, { quiet: true }).then(function (res) {
+      if (!res || !res.ok) { box.innerHTML = '<div class="pt-card"><p>' + esc(RJ.errMsg(res)) + '</p></div>'; return; }
+      PT = res;
+      paintPayTest();
+    }).catch(function (e) { box.innerHTML = '<div class="pt-card"><p>' + esc(e.message) + '</p></div>'; });
+  }
+  function ptHas(list, t) {
+    var low = String(t).toLowerCase();
+    return (list || []).some(function (x) { return String(x).toLowerCase() === low; });
+  }
+  function paintPayTest() {
+    var box = $('payTestBox');
+    var on = PT.on || [];
+    var buyable = (PT.products || []).filter(function (p) {
+      return p.tags.length && p.tags.every(function (t) { return ptHas(on, t); });
+    });
+    var mine = PT.rights || [];
+    var startUrl = 'start-online.html' + (PT.uid ? '?uid=' + encodeURIComponent(PT.uid) : '');
+
+    box.innerHTML =
+      '<div class="pt-card">'
+      + '<h3>決済テスト<span class="pt-state ' + (on.length ? 'on">テスト中' : 'off">オフ') + '</span></h3>'
+      + '<p>チェックしたコースは、<b>あなたのアカウントだけ</b>「未購入」の扱いになり、お客様と同じ流れで試せます。'
+      + 'ほかの運営とお客様には影響しません。</p>'
+      + '<p>テスト購入は、本番の決済と同じ処理で視聴権を出します（視聴権シートの発行元が「テスト」になります）。'
+      + 'プロラインの決済は通らないため、<b>LINEの購入メッセージは届きません</b>。</p>'
+      + '</div>'
+
+      + '<div class="pt-card"><h3>① テストするコース</h3>'
+      + ((PT.courses || []).length
+        ? (PT.courses || []).map(function (c, i) {
+          return '<label class="pt-course"><input type="checkbox" data-pttag="' + esc(c.tag) + '"' + (ptHas(on, c.tag) ? ' checked' : '') + '>'
+            + '<span>' + esc(c.course || '（コース設定に未登録）') + '<span class="hint">　タグ ' + esc(c.tag) + '</span></span></label>';
+        }).join('')
+        : '<p>有料コースがありません（商品マスターに商品を登録すると、ここに並びます）。</p>')
+      + '<div class="pt-row"><button class="btn" id="ptSave" type="button">保存する</button></div>'
+      + '<div class="pt-msg" id="ptSaveMsg"></div></div>'
+
+      + '<div class="pt-card"><h3>② 初回購入のテスト</h3>'
+      + '<p>LPから買った直後と同じ状態にします。発行したら、決済後のご案内ページ（LINEメッセージのボタンの行き先）を開いて、そこから進めてください。</p>'
+      + (buyable.length
+        ? '<div class="pt-row"><select id="ptProduct">' + buyable.map(function (p) {
+            return '<option value="' + esc(p.code) + '">' + esc(p.name) + '（' + esc(p.code) + '）</option>';
+          }).join('') + '</select><button class="btn" id="ptBuy" type="button">テスト購入を発行</button></div>'
+        : '<p class="hint">①でコースを選んで保存すると、そのコースの商品を選べるようになります。</p>')
+      + '<div class="pt-msg" id="ptBuyMsg"></div>'
+      + '<div class="pt-row"><a class="btn ghost" href="' + esc(startUrl) + '" target="_blank" rel="noopener">決済後のご案内ページを開く</a></div>'
+      + '</div>'
+
+      + '<div class="pt-card"><h3>③ いまのテスト購入</h3>'
+      + (mine.length
+        ? '<div class="scrollx"><table class="grid"><thead><tr><th>発行日時</th><th>商品</th><th>タグ</th><th>視聴期限</th></tr></thead><tbody>'
+          + mine.map(function (r) {
+            return '<tr><td>' + esc(r.time) + '</td><td>' + esc(r.code) + '</td><td>' + esc((r.tags || []).join(',')) + '</td><td>' + esc(r.end || '無期限') + '</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<p>まだありません。</p>')
+      + '<div class="pt-row"><button class="btn ghost" id="ptClear" type="button"' + (mine.length ? '' : ' disabled') + '>テスト購入をすべて取り消す</button></div>'
+      + '<p class="hint">取り消すと、あなたのテスト分の視聴権が消え、この端末でのオープニングの「視聴済み」も元に戻ります。最初からやり直せます。</p>'
+      + '<div class="pt-msg" id="ptClearMsg"></div></div>';
+
+    function msg(id, text, ok) { var el = $(id); el.className = 'pt-msg ' + (ok ? 'ok' : 'err'); el.textContent = text; }
+    function busy(b, label) { b.disabled = true; b.innerHTML = '<span class="spinner"></span> ' + label; }
+
+    $('ptSave').onclick = function () {
+      var b = this;
+      var tags = Array.prototype.filter.call(box.querySelectorAll('[data-pttag]'), function (x) { return x.checked; })
+        .map(function (x) { return x.dataset.pttag; });
+      busy(b, '保存中…');
+      api('pay_test_set', { token: store.token(), tags: tags.join(',') }).then(function (res) {
+        if (!res || !res.ok) { b.disabled = false; b.textContent = '保存する'; msg('ptSaveMsg', RJ.errMsg(res)); return; }
+        forgetAppCache();
+        PT.on = res.on || [];
+        paintPayTest();
+        msg('ptSaveMsg', PT.on.length ? 'テストをオンにしました。受講生ページを開き直すと反映されます。' : 'テストをオフにしました。', true);
+      }).catch(function (e) { b.disabled = false; b.textContent = '保存する'; msg('ptSaveMsg', e.message); });
+    };
+    if ($('ptBuy')) $('ptBuy').onclick = function () {
+      var b = this;
+      busy(b, '発行中…');
+      api('pay_test_buy', { token: store.token(), product: $('ptProduct').value }).then(function (res) {
+        if (!res || !res.ok) { b.disabled = false; b.textContent = 'テスト購入を発行'; msg('ptBuyMsg', RJ.errMsg(res)); return; }
+        forgetAppCache();
+        renderPayTest();
+        setTimeout(function () {
+          msg('ptBuyMsg', 'テスト購入を発行しました（' + res.product + (res.end ? '・' + res.end + 'まで' : '') + (res.extended ? '・期限を延長' : '')
+            + (res.trialAgain ? '・お試しの再購入として印が付きました' : '') + '）。「決済後のご案内ページを開く」から進めてください。', true);
+        }, 700);
+      }).catch(function (e) { b.disabled = false; b.textContent = 'テスト購入を発行'; msg('ptBuyMsg', e.message); });
+    };
+    $('ptClear').onclick = function () {
+      var b = this;
+      busy(b, '取り消し中…');
+      api('pay_test_clear', { token: store.token() }).then(function (res) {
+        if (!res || !res.ok) { b.disabled = false; b.textContent = 'テスト購入をすべて取り消す'; msg('ptClearMsg', RJ.errMsg(res)); return; }
+        forgetAppCache(true);
+        renderPayTest();
+        setTimeout(function () { msg('ptClearMsg', 'テスト購入を ' + (res.removed || 0) + ' 件取り消しました。', true); }, 700);
+      }).catch(function (e) { b.disabled = false; b.textContent = 'テスト購入をすべて取り消す'; msg('ptClearMsg', e.message); });
+    };
+  }
+  /** 受講生ページの控え（前回の内容）を捨てる。opening=true ならオープニングの「視聴済み」も戻す（この端末だけ） */
+  function forgetAppCache(opening) {
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (/^rj_data:/.test(k) || (opening && /^rj_opening_seen:/.test(k))) localStorage.removeItem(k);
+      });
+    } catch (e) {}
+  }
 
   // ---------- 動画 ----------
   function courseNames() {

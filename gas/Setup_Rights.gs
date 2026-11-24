@@ -218,7 +218,8 @@ function rightsAll_() {
       start: st ? st.date : null,
       end: en ? (en.hasTime ? en.date : dayEnd_(en.date)) : null,
       unlimited: !endRaw,
-      order: s_(r[R_ORDER - 1])
+      order: s_(r[R_ORDER - 1]),
+      from: s_(r[R_FROM - 1])
     });
   }
   return out;
@@ -303,7 +304,11 @@ function withRightTags_(u, rights) {
 function apiPurchase_(p) {
   const secret = s_(PropertiesService.getScriptProperties().getProperty('PURCHASE_SECRET'));
   if (!secret || s_(p.secret) !== secret) return { ok: false, error: 'bad_secret' };
+  return purchaseCore_(p);
+}
 
+/** 購入の中身（本番の決済も、運営の決済テストも、ここを通る） */
+function purchaseCore_(p) {
   const uid = clean_(p.uid);
   let mail = email_(clean_(p.email));
   if (mail && !okMail_(mail)) mail = '';
@@ -365,6 +370,113 @@ function apiPurchase_(p) {
 
     return { ok: true, product: prod.code, tags: prod.tags, end: end ? ymd_(end) : '',
              extended: extended, newcomer: who.created, trialAgain: trialAgain };
+  } finally { lock.releaseLock(); }
+}
+
+// ----- ③ 決済テスト（運営だけ・v1.14.0）-----
+/**
+ * 運営ページの「決済テスト」タブから使う。
+ * ・テストの対象にしたコースは、その運営アカウントだけ「お客様と同じ（未購入から）」扱いになる
+ *   （ほかの運営・お客様には影響しない）。対象は運営ごとにスクリプトプロパティ PAY_TEST に入れる
+ * ・テスト購入は、本番の決済と同じ purchaseCore_ を通す。違うのは、発行元が「テスト」になることだけ
+ * ・プロラインの決済を通らないので、LINEへの購入メッセージは届かない
+ */
+const PAY_TEST_PROP = 'PAY_TEST';
+const PAY_TEST_FROM = 'テスト';
+
+function payTestAll_() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(PAY_TEST_PROP) || '{}') || {}; }
+  catch (e) { return {}; }
+}
+/** その運営がいまテストしているコースのタグ（運営でなければ、いつも空） */
+function payTestTags_(u) {
+  if (!u || !u.admin) return [];
+  const list = payTestAll_()[email_(u.email)];
+  return Array.isArray(list) ? list.filter(String) : [];
+}
+/** 有料コース＝商品マスターのタグを持つコース（商品とコースを足せば、自動でここに並ぶ） */
+function paidCourses_() {
+  const prods = products_();
+  const cs = courses_();
+  const tags = [];
+  Object.keys(prods).forEach(function (k) {
+    prods[k].tags.forEach(function (t) { if (!hasTag_(tags, t)) tags.push(t); });
+  });
+  return tags.map(function (t) {
+    const c = cs.list.filter(function (x) { return String(x.tag).toLowerCase() === t.toLowerCase(); })[0];
+    return { tag: t, course: c ? c.name : '' };
+  });
+}
+function payTestRights_(u) {
+  return rightsOf_(rightsAll_(), u.uid, email_(u.email))
+    .filter(function (r) { return r.from === PAY_TEST_FROM; })
+    .map(function (r) { return { code: r.code, tags: r.tags, end: r.end ? ymd_(r.end) : '', time: r.time ? fmt_(r.time) : '' }; });
+}
+
+function apiPayTestGet_(p) {
+  const g = requireAdmin_(p); if (!g.ok) return g;
+  const prods = products_();
+  return {
+    ok: true,
+    on: payTestTags_(g.user),
+    courses: paidCourses_(),
+    products: Object.keys(prods).map(function (k) {
+      const x = prods[k]; return { code: x.code, name: x.name, tags: x.tags, days: x.days };
+    }),
+    rights: payTestRights_(g.user),
+    uid: s_(g.user.uid)
+  };
+}
+
+function apiPayTestSet_(p) {
+  const g = requireAdmin_(p); if (!g.ok) return g;
+  const paid = paidCourses_().map(function (c) { return c.tag; });
+  const want = tags_(p.tags).filter(function (t) { return hasTag_(paid, t); });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const all = payTestAll_();
+    const k = email_(g.user.email);
+    if (want.length) all[k] = want; else delete all[k];
+    PropertiesService.getScriptProperties().setProperty(PAY_TEST_PROP, JSON.stringify(all));
+  } finally { lock.releaseLock(); }
+  return { ok: true, on: want };
+}
+
+/** テスト購入：本番と同じ中身で視聴権を出す（対象にしたコースの商品だけ） */
+function apiPayTestBuy_(p) {
+  const g = requireAdmin_(p); if (!g.ok) return g;
+  const u = g.user;
+  const on = payTestTags_(u);
+  const prod = products_()[s_(p.product).toLowerCase()];
+  if (!prod) return { ok: false, error: 'unknown_product' };
+  if (!on.length || !prod.tags.every(function (t) { return hasTag_(on, t); })) return { ok: false, error: 'pay_test_off' };
+  return purchaseCore_({
+    uid: s_(u.uid), email: u.email, name: u.name,
+    product: prod.code, order: 'TEST-' + Date.now(), from: PAY_TEST_FROM
+  });
+}
+
+/** テスト購入の取り消し：この運営のテスト分の視聴権だけを消す */
+function apiPayTestClear_(p) {
+  const g = requireAdmin_(p); if (!g.ok) return g;
+  const u = g.user;
+  const mail = email_(u.email), uid = s_(u.uid);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(25000);
+  try {
+    const sh = ss_().getSheetByName(SH_RIGHT);
+    if (!sh || sh.getLastRow() < 2) return { ok: true, removed: 0 };
+    const vals = sh.getRange(2, 1, sh.getLastRow() - 1, R_COLS).getValues();
+    let n = 0;
+    for (let i = vals.length - 1; i >= 0; i--) {
+      const r = vals[i];
+      if (s_(r[R_FROM - 1]) !== PAY_TEST_FROM) continue;
+      const mine = (mail && email_(r[R_MAIL - 1]) === mail) || (uid && s_(r[R_UID - 1]) === uid);
+      if (!mine) continue;
+      sh.deleteRow(i + 2); n++;
+    }
+    return { ok: true, removed: n };
   } finally { lock.releaseLock(); }
 }
 

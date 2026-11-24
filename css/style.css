@@ -1877,3 +1877,51 @@ html[data-season="natsu"] .fall i { filter: blur(.4px); }
 .modal a.buy-item__go, .modal a.buy-line, .modal a.buy-item__go:visited, .modal a.buy-line:visited { color: #fff; }
 .buy-note { margin: 14px 0 0; padding: 9px 12px; border: 1px solid #d9796b; border-radius: 9px; color: #b23c2c; background: #fdf1ef;
   font-size: 12.5px; font-weight: 700; line-height: 1.6; }
+
+/* ===== 決済テスト（運営だけ）2026-11-23 ===== */
+.paytest-bar { position: sticky; top: 0; z-index: 101; padding: 7px 12px; text-align: center; font-size: 12.5px; line-height: 1.6;
+  color: #5a3b00; background: repeating-linear-gradient(135deg, #ffe9a8, #ffe9a8 12px, #ffdf85 12px, #ffdf85 24px);
+  border-bottom: 1px solid #e7c25a; }
+.paytest-bar a { color: #5a3b00; margin-left: 10px; font-weight: 700; text-underline-offset: 3px; }
+.buy-test { margin: 14px 0 0; padding: 9px 12px; border: 1px dashed #d1a83a; border-radius: 9px; background: #fff8e1;
+  color: #6b4a00; font-size: 12.5px; font-weight: 700; line-height: 1.6; }
+.modal button.buy-item__go { border: 0; font: inherit; font-weight: 700; cursor: pointer; }
+.pt-box { display: grid; gap: 16px; max-width: 760px; }
+.pt-card { background: var(--surface); border: 1px solid rgba(18, 52, 90, .12); border-radius: 12px; padding: 16px 18px; }
+.pt-card h3 { margin: 0 0 8px; font-size: 15px; }
+.pt-card p { margin: 6px 0; font-size: 13px; line-height: 1.7; }
+.pt-state { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-left: 6px; }
+.pt-state.on { background: #ffe9a8; color: #5a3b00; }
+.pt-state.off { background: var(--sky-100); color: var(--text-mid); }
+.pt-course { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(18, 52, 90, .08); font-size: 14px; }
+.pt-course:first-of-type { border-top: 0; }
+.pt-course input { width: 18px; height: 18px; }
+.pt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.pt-row select { padding: 8px 10px; border: 1px solid rgba(18, 52, 90, .2); border-radius: 8px; font: inherit; min-width: 0; max-width: 100%; }
+.pt-card .btn { width: auto; padding: 10px 18px; }
+.pt-card .btn.ghost { background: none; color: var(--navy-800); border: 1px solid rgba(18, 52, 90, .25); }
+.pt-msg { font-size: 13px; font-weight: 700; margin-top: 8px; min-height: 1.4em; }
+.pt-msg.ok { color: #1c7a4a; }
+.pt-msg.err { color: #b23c2c; }
+
+/* 凛穏オンライン講義の切り替え（LEVEL1⇔LEVEL2を両方お持ちの方だけ）2026-11-24 */
+.series-switch {
+  display: flex; gap: 4px; padding: 4px; margin: 0 0 12px;
+  background: var(--surface); border: 1px solid rgba(98, 183, 231, .28); border-radius: 14px;
+}
+.series-switch .ss-btn {
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: none; border: 0; border-radius: 10px; padding: 7px 6px; cursor: pointer;
+  color: var(--text-mid); font: inherit; line-height: 1.35; text-align: center;
+}
+.series-switch .ss-btn b { font-size: 12px; letter-spacing: .08em; }
+.series-switch .ss-btn span { font-size: 10.5px; font-weight: 600; overflow-wrap: anywhere; }
+.series-switch .ss-btn:not(.on):hover { background: rgba(98, 183, 231, .12); color: var(--ink-strong); }
+.series-switch .ss-btn.on {
+  background: linear-gradient(135deg, var(--navy-900), var(--navy-700)); color: #fff; cursor: default;
+}
+.series-switch .ss-btn.ss-buy { border: 1px dashed rgba(98, 183, 231, .55); color: var(--sky-500); }
+.series-switch .ss-btn.ss-buy span { font-weight: 700; }
+.series-switch .ss-btn.ss-buy:hover { background: rgba(98, 183, 231, .12); color: var(--sky-500); }
+.watch #vSwitch .series-switch { max-width: 440px; }
+.side-head .series-switch { margin-top: 2px; }

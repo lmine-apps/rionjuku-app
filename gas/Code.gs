@@ -1,6 +1,6 @@
 /**
  * 凛穏塾 受講生用 動画視聴アプリ ── GAS門番（バックエンド）
- * VERSION: v1.13.0
+ * VERSION: v1.14.0
  * DATE   : 2026-08-17
  *
  * 役割：スプレッドシート（動画一覧／受講生／コース設定／お知らせ）への唯一の窓口。
@@ -23,7 +23,7 @@
 
 // ===== 設定 =====
 // ★ここを直したら、上のコメントの VERSION も合わせること（?action=ping で返る値）
-const VERSION = 'v1.13.0';
+const VERSION = 'v1.14.0';
 const SHEET_ID   = '1HGULFOFI5MkefWsSD3S7XBOiYZQ2mQDKxJDIKjOeZxI'; // 凛穏塾動画一覧
 const SH_VIDEO   = '動画一覧';     // 見つからなければ先頭タブを使う
 const SH_STUDENT = '閲覧者一覧';   // 旧名「受講生」でも動くようにしてある
@@ -99,6 +99,10 @@ function doPost(e) {
       case 'data':          return out_(apiData_(p));
       case 'profile_save':  return out_(apiProfileSave_(p));
       case 'account_setup': return out_(apiAccountSetup_(p));
+      case 'pay_test_get':  return out_(apiPayTestGet_(p));
+      case 'pay_test_set':  return out_(apiPayTestSet_(p));
+      case 'pay_test_buy':  return out_(apiPayTestBuy_(p));
+      case 'pay_test_clear':return out_(apiPayTestClear_(p));
       case 'purchase':      return out_(apiPurchase_(p));
       case 'line_link':     return out_(apiLineLink_(p));
       case 'news_like':     return out_(apiNewsLike_(p));
@@ -671,19 +675,22 @@ function apiData_(p) {
   const cs = courses_();
   const vids = videos_();
   // 常時販売でお求めの方の視聴権（タグごとの期限）。タグをお持ちの受講生には関係しません
-  const rights = u.admin ? {} : rightsFor_(u);
+  // 決済テスト中の運営は、テストの対象にしたコースだけ「お客様と同じ（未購入から）」扱いにする（v1.14.0）
+  const testTags = payTestTags_(u);
+  const rights = (u.admin && !testTags.length) ? {} : rightsFor_(u);
   const buckets = {};
   for (let i = 0; i < vids.length; i++) {
     const v = vids[i];
-    if (v.hidden && !u.admin) continue;
     const conf = cs.map[v.course] || { name: v.course, tag: v.course, order: 9999, published: true, desc: '' };
-    if (!conf.published && !u.admin) continue;
     // 動画のF列にタグがあればそれで判定（カンマ区切りで複数可＝どれか1つ持っていれば視聴可）。
     // 空欄ならコース設定のタグを継承する。
     const needs = v.tag ? tags_(v.tag) : [conf.tag];
+    const adm = u.admin && !(testTags.length && anyTag_(testTags, needs));
+    if (v.hidden && !adm) continue;
+    if (!conf.published && !adm) continue;
     // タグが無い方は、視聴権を見ます。期限が切れていても一覧には残し、再生だけ止めます
     let right = null;
-    if (!u.admin && !anyTag_(u.tags, needs)) {
+    if (!adm && !anyTag_(u.tags, needs)) {
       right = bestRight_(rights, needs);
       if (!right) continue;
     }
@@ -770,6 +777,7 @@ function apiData_(p) {
     token: makeToken_(u, deviceEnter_(u, g.sid || p.dev, '', Object.keys(rights).length > 0)),
     user: userPayload_(u),
     courses: courseList,
+    payTest: testTags,          // 決済テストの対象（運営だけ。お客様には常に空）
     // お知らせの宛先は、いま有効な視聴権のタグも見ます（ご購入の方だけに届けられるように）
     news: newsForUser_(withRightTags_(u, rights)),
     myReplies: myReplies_(u),

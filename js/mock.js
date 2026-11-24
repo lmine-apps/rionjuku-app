@@ -32,23 +32,46 @@
   //   active … 視聴権あり／soon … 残り10日／expired … 期限切れ（延長の入口）
   //   new    … LINEだけでご購入（メールアドレスもパスワードも未登録）
   var RIGHT_DEMO = (location.search.match(/[?&]right=(\w+)/) || [])[1] || '';
-  if (RIGHT_DEMO) {
+  {
     VIDEOS.push(
       { row: 60, course: '凛穏オンライン講義 LEVEL1', chapter: 'LEVEL1 基礎講義', title: '伝説の500人講義', url: 'https://vimeo.com/1119403217', note: '', tag: '', hidden: false, start: '', end: '' },
-      { row: 61, course: '凛穏オンライン講義 LEVEL1', chapter: 'LEVEL1 基礎講義', title: '補足ボイス', url: 'assets/demo-voice.wav', note: '', tag: '', hidden: false, start: '', end: '' }
+      { row: 61, course: '凛穏オンライン講義 LEVEL1', chapter: 'LEVEL1 基礎講義', title: '補足ボイス', url: 'assets/demo-voice.wav', note: '', tag: '', hidden: false, start: '', end: '' },
+      { row: 62, course: '凛穏オンライン講義 LEVEL2', chapter: '2Days講座', title: '第1講　永遠に幸せになれない人達の共通点', url: 'https://vimeo.com/1200889077', note: '0:00:24　講義の注意点\n0:07:47　運を自分で作る　凛穏塾理念', tag: '', hidden: false, start: '', end: '' }
     );
   }
   function mockRight(tag) {
-    if (!RIGHT_DEMO || tag !== '基礎講義') return null;
+    if (!RIGHT_DEMO || tag !== 'L1') return null;
     var days = RIGHT_DEMO === 'expired' ? -2 : (RIGHT_DEMO === 'soon' ? 10 : 300);
     return { active: days >= 0, endAt: d(days) + ' 23:59', daysLeft: days >= 0 ? days + 1 : null };
+  }
+
+  // ── 決済テスト（運営だけ）のデモ。設定とテスト購入は、このブラウザに覚えさせる ──
+  var PRODUCTS = [
+    { code: 'L1-TRIAL', name: 'LEVEL1 お試し90日', tags: ['L1'], days: 90 },
+    { code: 'L1', name: 'LEVEL1 1年', tags: ['L1'], days: 365 },
+    { code: 'L2', name: 'LEVEL2 1年', tags: ['L2'], days: 365 },
+    { code: 'SET', name: '完全セット 1年', tags: ['L1', 'L2'], days: 365 }
+  ];
+  function PT() { try { return JSON.parse(localStorage.getItem('rj_mock_paytest') || '') || { on: [], rights: [] }; } catch (e) { return { on: [], rights: [] }; } }
+  function savePT(v) { try { localStorage.setItem('rj_mock_paytest', JSON.stringify(v)); } catch (e) {} }
+  function testRight(tag) {
+    var best = null;
+    PT().rights.forEach(function (r) {
+      if (r.tags.indexOf(tag) < 0) return;
+      if (!best || r.end > best.end) best = r;
+    });
+    if (!best) return null;
+    var en = new Date(best.end + 'T23:59:59');
+    var days = Math.ceil((en.getTime() - Date.now()) / 86400000);
+    return { active: days > 0, endAt: best.end + ' 23:59', daysLeft: days > 0 ? days : null };
   }
 
   var COURSES = [
     { row: 2, name: '凛穏塾2.5期生', tag: '凛穏塾2.5期生', order: 10, published: true, desc: '2.5期生の講義アーカイブです。' },
     { row: 3, name: '凛穏塾2期生',   tag: '凛穏塾2期生',   order: 20, published: true, desc: '' },
     { row: 4, name: '卒業生サロン',   tag: '卒業生サロン',   order: 30, published: true, desc: '卒業生サロン限定の講義です。' },
-    { row: 5, name: '凛穏オンライン講義 LEVEL1', tag: '基礎講義', order: 5, published: true, desc: '通称「伝説の500人講義」です。' }
+    { row: 5, name: '凛穏オンライン講義 LEVEL1', tag: 'L1', order: 5, published: true, desc: '通称「伝説の500人講義」です。' },
+    { row: 6, name: '凛穏オンライン講義 LEVEL2', tag: 'L2', order: 6, published: true, desc: '2Days講座＋質問回答会＋補足ボイス' }
   ];
   var STUDENTS = [
     { row: 2, name: 'デモ 受講生', email: 'demo@example.com',  pass: 'demo', tags: '凛穏塾2.5期生,卒業生サロン', status: '有効', memo: 'デモ用', joined: '2026-08-17', uid: '' },
@@ -113,10 +136,12 @@
 
   function buildCourses(u) {
     var out = [];
+    var on = u.admin ? PT().on : [];
     COURSES.forEach(function (c) {
       var right = null;
-      if (!u.admin && u.tags.indexOf(c.tag) < 0) {
-        right = mockRight(c.tag);
+      var guest = u.admin && on.indexOf(c.tag) >= 0;     // 決済テスト中の運営は、対象のコースだけお客様と同じ扱い
+      if ((!u.admin || guest) && u.tags.indexOf(c.tag) < 0) {
+        right = guest ? testRight(c.tag) : mockRight(c.tag);
         if (!right) return;
       }
       var chaps = [];
@@ -210,6 +235,7 @@
           resolve({
             ok: true, user: me, courses: buildCourses(me), news: newsFor(me),
             watched: Object.keys(WATCHED).map(Number),
+            payTest: me.admin ? PT().on : [],
             // デモ用の「○名の方が視聴済み」。本番はGASが数えて返す（3名未満は渡さない）
             watchCounts: { 2: 23, 3: 11, 4: 7, 45: 5 },
             myReplies: me.email === 'demo@example.com' ? {} : {}
@@ -245,6 +271,41 @@
         if (action === 'line_link') { resolve({ ok: true }); return; }
 
         if (!me.admin) { resolve({ ok: false, error: 'forbidden' }); return; }
+        if (action === 'pay_test_get') {
+          var pt = PT();
+          resolve({ ok: true, on: pt.on, uid: me.uid || '', products: PRODUCTS,
+            courses: [{ tag: 'L1', course: '凛穏オンライン講義 LEVEL1' }, { tag: 'L2', course: '凛穏オンライン講義 LEVEL2' }],
+            rights: pt.rights.map(function (r) { return { code: r.code, tags: r.tags, end: r.end, time: r.time }; }) });
+          return;
+        }
+        if (action === 'pay_test_set') {
+          var pt2 = PT();
+          pt2.on = String(p.tags || '').split(',').map(function (t) { return t.trim(); }).filter(function (t) { return t === 'L1' || t === 'L2'; });
+          savePT(pt2); resolve({ ok: true, on: pt2.on }); return;
+        }
+        if (action === 'pay_test_buy') {
+          var pt3 = PT();
+          var prod = PRODUCTS.filter(function (x) { return x.code.toLowerCase() === String(p.product || '').toLowerCase(); })[0];
+          if (!prod) { resolve({ ok: false, error: 'unknown_product' }); return; }
+          if (!prod.tags.every(function (t) { return pt3.on.indexOf(t) >= 0; })) { resolve({ ok: false, error: 'pay_test_off' }); return; }
+          var trialAgain = /TRIAL/.test(prod.code) && pt3.rights.length > 0;
+          var base = new Date(), extended = false;
+          pt3.rights.forEach(function (r) {
+            if (r.code !== prod.code) return;
+            var en = new Date(r.end + 'T00:00:00');
+            if (en > base) { base = en; extended = true; }
+          });
+          var end = new Date(base.getFullYear(), base.getMonth(), base.getDate() + prod.days);
+          var ymd = end.getFullYear() + '-' + ('0' + (end.getMonth() + 1)).slice(-2) + '-' + ('0' + end.getDate()).slice(-2);
+          pt3.rights.push({ code: prod.code, tags: prod.tags, end: ymd, time: d(0) + ' ' + new Date().toTimeString().slice(0, 5) });
+          savePT(pt3);
+          resolve({ ok: true, product: prod.code, tags: prod.tags, end: ymd, extended: extended, trialAgain: trialAgain });
+          return;
+        }
+        if (action === 'pay_test_clear') {
+          var pt4 = PT(); var n = pt4.rights.length; pt4.rights = []; savePT(pt4);
+          resolve({ ok: true, removed: n }); return;
+        }
         if (action === 'admin_data') {
           resolve({
             ok: true, user: me, videos: adminVideos(), courses: COURSES,
